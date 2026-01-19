@@ -179,3 +179,21 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+/backend/storage
+/storage
+
+# Database
+*.db
+telegram_automation.db
+backend/telegram_automation.db
+
+# Telegram Sessions
+*.session
+*.session-journal
+telegram_sessions/
+backend/telegram_sessions/
+
+
+*.session 
+telegram_sessions/ 
+*.db 

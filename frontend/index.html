@@ -1,0 +1,966 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Telegram Automation System</title>
+    <link rel="stylesheet" href="/css/variables.css" />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link rel="stylesheet" href="/css/components.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Authentication Modal -->
+    <div id="authModal" class="modal">
+      <div class="modal-content text-center">
+        <div class="mb-4">
+          <span style="font-size: 3rem">📱</span>
+        </div>
+        <h2 class="mb-2">Telegram Automation</h2>
+        <p class="text-secondary mb-4">
+          Sign in to manage your groups and messages
+        </p>
+        <div id="phoneStep" class="auth-step">
+          <p>Enter your phone number to receive an OTP code</p>
+          <input type="tel" id="phoneInput" placeholder="+1234567890" />
+          <button id="sendCodeBtn" class="btn btn-primary">Send Code</button>
+        </div>
+        <div id="otpStep" class="auth-step hidden">
+          <p>Enter the OTP code sent to your Telegram</p>
+          <input type="text" id="otpInput" placeholder="12345" />
+          <button id="verifyCodeBtn" class="btn btn-primary">
+            Verify Code
+          </button>
+        </div>
+        <div id="passwordStep" class="auth-step hidden">
+          <p>Enter your 2FA password</p>
+          <input
+            type="password"
+            id="passwordInput"
+            placeholder="Your 2FA password"
+          />
+          <button id="verifyPasswordBtn" class="btn btn-primary">
+            Verify Password
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Container -->
+    <div id="app" class="hidden">
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar">
+        <div class="logo">
+          <h1>📱 Telegram Auto</h1>
+        </div>
+        <nav class="nav">
+          <a href="#" class="nav-item active" data-section="dashboard">
+            <span class="icon">📊</span>
+            <span>Dashboard</span>
+          </a>
+          <a href="#" class="nav-item" data-section="groups">
+            <span class="icon">👥</span>
+            <span>Groups</span>
+          </a>
+          <a href="#" class="nav-item" data-section="media">
+            <span class="icon">🖼️</span>
+            <span>Media Library</span>
+          </a>
+          <a href="#" class="nav-item" data-section="messages">
+            <span class="icon">✉️</span>
+            <span>Send Message</span>
+          </a>
+          <a href="#" class="nav-item" data-section="scheduler">
+            <span class="icon">⏰</span>
+            <span>Scheduler</span>
+          </a>
+          <a href="#" class="nav-item" data-section="settings">
+            <span class="icon">⚙️</span>
+            <span>Settings</span>
+          </a>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="user-info">
+            <span id="userPhone">Not connected</span>
+          </div>
+          <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="content-section active">
+          <h2>Dashboard</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">👥</div>
+              <div class="stat-info">
+                <h3 id="totalGroups">0</h3>
+                <p>Total Groups</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">✅</div>
+              <div class="stat-info">
+                <h3 id="activeGroups">0</h3>
+                <p>Active Groups</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">🖼️</div>
+              <div class="stat-info">
+                <h3 id="totalMedia">0</h3>
+                <p>Media Files</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">⏰</div>
+              <div class="stat-info">
+                <h3 id="scheduledMessages">0</h3>
+                <p>Scheduled</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rate Limit Widget -->
+          <div id="rateLimitWidget" class="dashboard-widget">
+            <p class="text-muted">Loading rate limit status...</p>
+          </div>
+        </section>
+
+        <!-- Groups Section -->
+        <section id="groups" class="content-section">
+          <div class="section-header">
+            <h2>Groups Management</h2>
+            <button id="syncGroupsBtn" class="btn btn-primary">
+              🔄 Sync from Telegram
+            </button>
+          </div>
+
+          <!-- Groups Toolbar -->
+          <div class="groups-toolbar">
+            <!-- Search & Sort -->
+            <div class="toolbar-group">
+              <input
+                type="text"
+                id="groupSearch"
+                placeholder="🔍 Search groups..."
+                class="search-input"
+              />
+              <select id="sortBy" class="sort-select">
+                <option value="title-asc">Name (A-Z)</option>
+                <option value="title-desc">Name (Z-A)</option>
+                <option value="created_at-desc">Newest First</option>
+                <option value="created_at-asc">Oldest First</option>
+              </select>
+            </div>
+
+            <!-- Filters -->
+            <div class="toolbar-group">
+              <select id="permissionFilter">
+                <option value="">All Permissions</option>
+                <option value="all">All Content</option>
+                <option value="text_only">Text Only</option>
+                <option value="text_link">Text + Link</option>
+                <option value="text_image">Text + Image</option>
+                <option value="text_link_image">Text + Link + Image</option>
+              </select>
+              <div class="toggle-filter">
+                <input type="checkbox" id="activeOnlyFilter" checked />
+                <label for="activeOnlyFilter">Active Only</label>
+              </div>
+            </div>
+
+            <!-- Bulk Actions Integration -->
+            <div class="toolbar-group bulk-group">
+              <div class="select-all-wrapper">
+                <input type="checkbox" id="selectAllGroups" />
+                <label for="selectAllGroups"
+                  >Select All
+                  <span id="selectedCount" class="badge">0</span></label
+                >
+              </div>
+
+              <div
+                id="bulkActionsDropdown"
+                class="bulk-actions"
+                style="display: none"
+              >
+                <select id="bulkPermission" class="bulk-select">
+                  <option value="">Set Permission...</option>
+                  <option value="all">All Content</option>
+                  <option value="text_only">Text Only</option>
+                  <option value="text_link">Text + Link</option>
+                  <option value="text_image">Text + Image</option>
+                  <option value="text_link_image">Text + Link + Image</option>
+                </select>
+                <div class="bulk-buttons">
+                  <button
+                    id="bulkActivateBtn"
+                    class="btn btn-outline-success btn-sm"
+                    title="Activate Selected"
+                  >
+                    ✅
+                  </button>
+                  <button
+                    id="bulkDeactivateBtn"
+                    class="btn btn-outline-danger btn-sm"
+                    title="Deactivate Selected"
+                  >
+                    ❌
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Toggle Analytics Button -->
+          <div class="mb-4">
+            <button id="toggleAnalyticsBtn" class="btn btn-primary">
+              📊 Show Analytics
+            </button>
+          </div>
+
+          <!-- Analytics Section -->
+          <div
+            class="analytics-section"
+            id="groupAnalytics"
+            style="display: none"
+          >
+            <div class="analytics-header">
+              <h3>📊 Group Performance Analytics</h3>
+              <button id="refreshAnalyticsBtn" class="btn btn-secondary btn-sm">
+                🔄 Refresh
+              </button>
+            </div>
+
+            <div class="analytics-overview">
+              <div class="stat-card">
+                <div class="stat-value" id="analyticsTotalMessages">0</div>
+                <div class="stat-label">Total Messages</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="analyticsSuccessRate">0%</div>
+                <div class="stat-label">Success Rate</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="analyticsFailed">0</div>
+                <div class="stat-label">Failed Messages</div>
+              </div>
+            </div>
+
+            <div class="analytics-content">
+              <div class="analytics-card">
+                <h4>🏆 Top Performing Groups</h4>
+                <div id="topGroupsList"></div>
+              </div>
+
+              <div class="analytics-card">
+                <h4>⚠️ Groups Needing Attention</h4>
+                <div id="problemGroupsList"></div>
+              </div>
+
+              <div class="analytics-card">
+                <h4>💤 Inactive Groups (30+ days)</h4>
+                <div id="inactiveGroupsList"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="groupsList" class="groups-list"></div>
+        </section>
+
+        <!-- Media Library Section -->
+        <section id="media" class="content-section">
+          <div class="section-header">
+            <h2>Media Library</h2>
+          </div>
+          <div class="upload-area" id="uploadArea">
+            <input
+              type="file"
+              id="fileInput"
+              accept="image/*"
+              multiple
+              hidden
+            />
+            <div class="upload-content">
+              <span class="upload-icon">📤</span>
+              <p>Drag & drop images here or click to upload</p>
+              <button class="btn btn-secondary" id="selectFileBtn">
+                Select File
+              </button>
+            </div>
+          </div>
+          <div id="mediaGallery" class="media-gallery"></div>
+        </section>
+
+        <!-- Send Message Section -->
+        <section id="messages" class="content-section">
+          <div class="section-header">
+            <h2>Send Message</h2>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="compose">
+              📝 Compose
+            </button>
+            <button class="tab-btn" data-tab="history">📜 History</button>
+          </div>
+
+          <!-- Compose Tab -->
+          <div id="composeTab" class="tab-content active">
+            <div class="message-composer">
+              <!-- Template Header -->
+              <div class="template-header">
+                <div class="template-selector">
+                  <select
+                    id="loadTemplateSelect"
+                    class="template-select"
+                    style="min-width: 250px"
+                  >
+                    <option value="">📋 Load Template...</option>
+                  </select>
+                </div>
+                <div class="template-actions">
+                  <span
+                    id="draftIndicator"
+                    class="draft-indicator badge"
+                    style="
+                      background: var(--slate-100);
+                      color: var(--text-secondary);
+                      display: none;
+                    "
+                  >
+                    📝 Draft Saved
+                  </span>
+                  <button id="saveTemplateBtn" class="btn btn-secondary btn-sm">
+                    💾 Save as Template
+                  </button>
+                </div>
+              </div>
+
+              <div class="composer-grid">
+                <!-- Left Column: Content -->
+                <div class="composer-main">
+                  <div class="form-group">
+                    <label for="messageText">Message Content *</label>
+                    <textarea
+                      id="messageText"
+                      rows="8"
+                      placeholder="Type your message here..."
+                      style="font-family: inherit; line-height: 1.6"
+                    ></textarea>
+                    <div class="d-flex justify-content-between mt-2">
+                      <span class="char-count"
+                        ><span id="charCount">0</span> chars</span
+                      >
+                      <button
+                        type="button"
+                        id="previewMessageBtn"
+                        class="btn btn-secondary btn-sm"
+                      >
+                        👁️ Preview
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="messageLink">Attachment Link (Optional)</label>
+                    <div class="input-group">
+                      <span class="input-icon">🔗</span>
+                      <input
+                        type="url"
+                        id="messageLink"
+                        placeholder="https://example.com"
+                        style="padding-left: 2.5rem"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Media Attachment (Optional)</label>
+                    <input type="hidden" id="messageMedia" />
+                    <!-- Selected Image Preview -->
+                    <div
+                      id="messageMediaPreview"
+                      class="media-preview-container mb-2"
+                      style="display: none"
+                    >
+                      <div style="position: relative; display: inline-block">
+                        <img
+                          src=""
+                          alt="Selected Media"
+                          style="
+                            max-height: 120px;
+                            border-radius: 8px;
+                            border: 1px solid var(--slate-200);
+                            box-shadow: var(--shadow-sm);
+                          "
+                        />
+                      </div>
+                    </div>
+                    <div
+                      class="media-input-wrapper"
+                      style="display: flex; gap: 10px"
+                    >
+                      <button
+                        type="button"
+                        id="selectMessageMedia"
+                        class="btn btn-secondary"
+                        style="flex: 1"
+                      >
+                        🖼️ Select Image
+                      </button>
+                      <button
+                        type="button"
+                        id="clearMessageMedia"
+                        class="btn btn-outline-danger"
+                        style="display: none"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right Column: Targeting & Sending -->
+                <div class="composer-sidebar">
+                  <div
+                    class="card p-4"
+                    style="
+                      background: var(--slate-50);
+                      border: 1px solid var(--slate-200);
+                    "
+                  >
+                    <h4
+                      class="mb-3"
+                      style="
+                        font-size: var(--text-sm);
+                        text-transform: uppercase;
+                      "
+                    >
+                      🎯 Targeting
+                    </h4>
+
+                    <div class="form-group mb-4">
+                      <label
+                        class="checkbox-label"
+                        style="
+                          display: flex;
+                          gap: 8px;
+                          cursor: pointer;
+                          align-items: center;
+                        "
+                      >
+                        <input
+                          type="checkbox"
+                          id="bulkSendCheck"
+                          style="width: 18px; height: 18px"
+                        />
+                        <span style="font-weight: 600">Bulk Send Mode</span>
+                      </label>
+                      <p class="text-sm text-muted ml-4">
+                        Send to all groups matching a permission.
+                      </p>
+                    </div>
+
+                    <div
+                      id="bulkPermissionGroup"
+                      class="form-group"
+                      style="display: none"
+                    >
+                      <label>Permission Type</label>
+                      <select id="messageBulkPermission">
+                        <option value="">Choose type...</option>
+                        <option value="all">All Content</option>
+                        <option value="text_only">Text Only</option>
+                        <option value="text_link">Text + Link</option>
+                        <option value="text_image">Text + Image</option>
+                        <option value="text_link_image">
+                          Text + Link + Image
+                        </option>
+                      </select>
+                    </div>
+
+                    <div id="individualGroupsGroup" class="form-group">
+                      <label>Target Groups</label>
+                      <div
+                        id="groupSelector"
+                        class="group-selector"
+                        style="
+                          max-height: 200px;
+                          overflow-y: auto;
+                          background: white;
+                          padding: 10px;
+                          border: 1px solid var(--color-border);
+                          border-radius: 6px;
+                        "
+                      >
+                        <!-- Populated by JS -->
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    id="sendMessageBtn"
+                    class="btn btn-primary btn-large shadow-lg"
+                  >
+                    🚀 Send Message Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- History Tab -->
+          <div id="historyTab" class="tab-content" style="display: none">
+            <div class="groups-toolbar mb-4">
+              <div class="toolbar-group" style="flex: 2">
+                <input
+                  type="text"
+                  id="historySearch"
+                  placeholder="🔍 Search history..."
+                  class="search-input"
+                  style="width: 100%"
+                />
+              </div>
+              <div class="toolbar-group">
+                <select id="historyFilter" style="min-width: 140px">
+                  <option value="all">All Status</option>
+                  <option value="sent">✅ Sent</option>
+                  <option value="failed">❌ Failed</option>
+                </select>
+                <button id="exportHistoryBtn" class="btn btn-secondary">
+                  📥 Export CSV
+                </button>
+              </div>
+            </div>
+
+            <div id="historyList" class="history-list">
+              <!-- Content populated by JS -->
+              <div class="empty-state">
+                <p class="text-secondary">Loading history...</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Scheduler Section -->
+        <section id="scheduler" class="content-section">
+          <div class="section-header">
+            <h2>Schedule Message</h2>
+          </div>
+
+          <div class="message-composer">
+            <div class="composer-grid">
+              <!-- Left: Content -->
+              <div class="composer-main">
+                <div class="form-group">
+                  <label for="scheduleText">Message Text *</label>
+                  <textarea
+                    id="scheduleText"
+                    rows="8"
+                    placeholder="Message to schedule..."
+                    style="font-family: inherit; line-height: 1.6"
+                  ></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="scheduleLink">Link (optional)</label>
+                  <div class="input-group">
+                    <span class="input-icon">🔗</span>
+                    <input
+                      type="url"
+                      id="scheduleLink"
+                      placeholder="https://example.com"
+                      style="padding-left: 2.5rem"
+                    />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Media Attachment (Optional)</label>
+                  <input type="hidden" id="scheduleMedia" />
+                  <!-- Selected Image Preview -->
+                  <div
+                    id="scheduleMediaPreview"
+                    class="media-preview-container mb-2"
+                    style="display: none"
+                  >
+                    <div style="position: relative; display: inline-block">
+                      <img
+                        src=""
+                        alt="Selected Media"
+                        style="
+                          max-height: 120px;
+                          border-radius: 8px;
+                          border: 1px solid var(--slate-200);
+                          box-shadow: var(--shadow-sm);
+                        "
+                      />
+                    </div>
+                  </div>
+                  <div
+                    class="media-input-wrapper"
+                    style="display: flex; gap: 10px"
+                  >
+                    <button
+                      type="button"
+                      id="selectScheduleMedia"
+                      class="btn btn-secondary"
+                      style="flex: 1"
+                    >
+                      🖼️ Select Image
+                    </button>
+                    <button
+                      type="button"
+                      id="clearScheduleMedia"
+                      class="btn btn-outline-danger"
+                      style="display: none"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Settings -->
+              <div class="composer-sidebar">
+                <div
+                  class="card p-4"
+                  style="
+                    background: var(--slate-50);
+                    border: 1px solid var(--slate-200);
+                  "
+                >
+                  <h4
+                    class="mb-3"
+                    style="font-size: var(--text-sm); text-transform: uppercase"
+                  >
+                    ⏰ Timing & Target
+                  </h4>
+
+                  <div class="form-group">
+                    <label for="scheduleDateTime">Date & Time *</label>
+                    <input
+                      type="datetime-local"
+                      id="scheduleDateTime"
+                      style="width: 100%; font-size: 1rem; padding: 10px"
+                    />
+                  </div>
+
+                  <div class="form-group mt-4">
+                    <label
+                      class="checkbox-label"
+                      style="
+                        display: flex;
+                        gap: 8px;
+                        cursor: pointer;
+                        align-items: center;
+                      "
+                    >
+                      <input
+                        type="checkbox"
+                        id="bulkScheduleCheck"
+                        style="width: 18px; height: 18px"
+                      />
+                      <span style="font-weight: 600">Bulk Schedule</span>
+                    </label>
+                  </div>
+
+                  <div
+                    class="form-group"
+                    id="bulkSchedulePermissionGroup"
+                    style="display: none"
+                  >
+                    <label for="bulkSchedulePermission">Permission Type</label>
+                    <select id="bulkSchedulePermission">
+                      <option value="">Choose permission...</option>
+                      <option value="all">All Content</option>
+                      <option value="text_only">Text Only</option>
+                      <option value="text_link">Text + Link</option>
+                      <option value="text_image">Text + Image</option>
+                      <option value="text_link_image">
+                        Text + Link + Image
+                      </option>
+                    </select>
+                  </div>
+                  <div class="form-group" id="individualScheduleGroupsGroup">
+                    <label>Target Groups *</label>
+                    <div
+                      id="scheduleGroupSelector"
+                      class="group-selector"
+                      style="
+                        max-height: 200px;
+                        overflow-y: auto;
+                        background: white;
+                        padding: 10px;
+                        border: 1px solid var(--color-border);
+                        border-radius: 6px;
+                      "
+                    ></div>
+                  </div>
+                </div>
+
+                <button
+                  id="scheduleMessageBtn"
+                  class="btn btn-primary btn-large shadow-lg"
+                >
+                  📅 Schedule Message
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="section-header">
+            <h3>Scheduled Messages</h3>
+          </div>
+          <div id="scheduledList" class="scheduled-list"></div>
+        </section>
+
+        <!-- Media Library Section -->
+        <section id="media" class="content-section">
+          <div class="section-header">
+            <h2>Media Library</h2>
+            <p class="section-description">
+              Upload and manage images for your messages
+            </p>
+          </div>
+
+          <div
+            class="media-container"
+            style="
+              background: white;
+              border-radius: 12px;
+              padding: 24px;
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            "
+          >
+            <!-- Upload Area -->
+            <div id="uploadArea" class="upload-area mb-6">
+              <div class="upload-content">
+                <div style="color: var(--color-primary); margin-bottom: 1rem">
+                  <svg
+                    width="64"
+                    height="64"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                </div>
+                <p
+                  style="
+                    font-size: 1.1rem;
+                    font-weight: 500;
+                    color: var(--text-main);
+                    margin-bottom: 8px;
+                  "
+                >
+                  Drag & Drop images here
+                </p>
+                <p style="color: var(--text-secondary); margin-bottom: 24px">
+                  Supports JPG, PNG, GIF
+                </p>
+                <button id="selectFileBtn" class="btn btn-primary">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    style="margin-right: 8px"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  Choose Files
+                </button>
+              </div>
+              <input
+                type="file"
+                id="fileInput"
+                multiple
+                accept="image/*"
+                hidden
+              />
+            </div>
+
+            <!-- Stats & Filter Bar (Optional for future, simple header for now) -->
+            <div
+              class="media-toolbar mb-4"
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              <h3 style="font-size: 1.1rem; font-weight: 600">Gallery</h3>
+              <div style="color: var(--text-secondary); font-size: 0.9rem">
+                Total: <span id="totalMediaCount">0</span>
+              </div>
+            </div>
+
+            <!-- Gallery Grid -->
+            <div id="mediaGallery" class="media-gallery">
+              <!-- JS renders items here -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="settings" class="content-section">
+          <div class="section-header">
+            <h2>⚙️ Settings</h2>
+          </div>
+          <div class="settings-container">
+            <div class="settings-card">
+              <h3>🕒 Message Delays</h3>
+              <p class="settings-description">
+                Random delays between messages help avoid spam detection
+              </p>
+              <div class="form-group">
+                <label for="minDelay">Minimum Delay (seconds)</label>
+                <input
+                  type="number"
+                  id="minDelay"
+                  min="5"
+                  max="300"
+                  placeholder="10"
+                />
+                <span class="help-text">Minimum: 5 seconds</span>
+              </div>
+              <div class="form-group">
+                <label for="maxDelay">Maximum Delay (seconds)</label>
+                <input
+                  type="number"
+                  id="maxDelay"
+                  min="5"
+                  max="300"
+                  placeholder="30"
+                />
+                <span class="help-text">Maximum: 300 seconds (5 minutes)</span>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <h3>📊 Daily Limits</h3>
+              <p class="settings-description">
+                Protect your account from restrictions
+              </p>
+              <div class="form-group">
+                <label for="dailyLimit">Daily Message Limit</label>
+                <input
+                  type="number"
+                  id="dailyLimit"
+                  min="1"
+                  max="1000"
+                  placeholder="100"
+                />
+                <span class="help-text">Maximum: 1000 messages per day</span>
+              </div>
+            </div>
+
+            <div class="settings-actions">
+              <button id="saveSettingsBtn" class="btn btn-primary btn-large">
+                💾 Save Changes
+              </button>
+              <button id="resetSettingsBtn" class="btn btn-secondary">
+                🔄 Reset to Defaults
+              </button>
+              <button
+                id="settingsLogoutBtn"
+                class="btn btn-secondary"
+                style="
+                  margin-left: auto;
+                  color: var(--color-danger);
+                  border-color: var(--color-danger);
+                "
+              >
+                🚪 Logout
+              </button>
+            </div>
+
+            <div class="settings-info">
+              <p>
+                ℹ️ <strong>Changes take effect immediately</strong> for all new
+                messages. No server restart required.
+              </p>
+            </div>
+
+            <!-- Development Tools -->
+            <div class="settings-card danger-zone">
+              <h3>🗑️ Development Tools</h3>
+              <p class="warning-text">
+                ⚠️ <strong>WARNING:</strong> These actions cannot be undone!
+              </p>
+              <p class="settings-description">
+                Clear data by section for development and testing purposes.
+              </p>
+
+              <div class="clear-actions">
+                <button class="btn btn-danger" data-clear="media">
+                  🖼️ Clear Media Library
+                </button>
+                <button class="btn btn-danger" data-clear="groups">
+                  👥 Clear Groups
+                </button>
+                <button class="btn btn-danger" data-clear="messages">
+                  ✉️ Clear Message History
+                </button>
+                <button class="btn btn-danger" data-clear="scheduled">
+                  ⏰ Clear Scheduled Jobs
+                </button>
+                <button class="btn btn-danger" data-clear="all">
+                  🔥 Clear All Data (Keep Login)
+                </button>
+                <button class="btn btn-danger-extreme" data-clear="everything">
+                  💀 Clear Everything (Logout)
+                </button>
+              </div>
+
+              <div class="danger-info">
+                <p>
+                  <strong>Clear All Data:</strong> Removes groups, media, and
+                  messages but keeps you logged in.
+                </p>
+                <p>
+                  <strong>Clear Everything:</strong> Removes ALL data including
+                  your login session. You will be logged out.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Image Selector Modal -->
+    <div id="imageSelectorModal" class="modal hidden">
+      <div class="modal-content image-selector-modal">
+        <div class="modal-header">
+          <h2>Select Image</h2>
+          <button id="closeImageSelector" class="close-btn">✕</button>
+        </div>
+        <div id="imageSelectorGallery" class="image-selector-gallery"></div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/js/app.js" type="module"></script>
+  </body>
+</html>
