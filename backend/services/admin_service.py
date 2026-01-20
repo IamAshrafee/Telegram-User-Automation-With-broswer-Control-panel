@@ -22,13 +22,13 @@ def clear_media_data(db: Session) -> tuple[int, int]:
     files_deleted = 0
     
     if media_path.exists():
-        for file in media_path.glob('*'):
-            if file.is_file():
+        for file_obj in media_path.glob('*'):
+            if file_obj.is_file():
                 try:
-                    file.unlink()
+                    file_obj.unlink()
                     files_deleted += 1
                 except Exception as e:
-                    print(f"Error deleting file {file}: {e}")
+                    print(f"Error deleting file {file_obj}: {e}")
     
     # Delete database records
     db.query(Media).delete()

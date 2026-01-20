@@ -23,9 +23,19 @@ class MediaListResponse(BaseModel):
     file_size: int
     mime_type: str
     uploaded_at: datetime
+    url: Optional[str] = None
     
     class Config:
         from_attributes = True
+
+
+class PaginatedMediaResponse(BaseModel):
+    """Response schema for paginated media list."""
+    items: list[MediaListResponse]
+    total: int
+    page: int
+    size: int
+    pages: int
 
 
 class MediaDeleteResponse(BaseModel):

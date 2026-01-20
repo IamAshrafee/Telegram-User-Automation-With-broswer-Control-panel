@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/css/variables.css" />
     <link rel="stylesheet" href="/css/styles.css" />
     <link rel="stylesheet" href="/css/components.css" />
+    <link rel="stylesheet" href="/css/media.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -297,7 +298,16 @@
               </button>
             </div>
           </div>
-          <div id="mediaGallery" class="media-gallery"></div>
+          <div id="mediaGallery" class="media-gallery-grid"></div>
+          <div
+            id="loadMoreContainer"
+            class="load-more-container"
+            style="display: none"
+          >
+            <button id="loadMoreBtn" class="btn btn-secondary">
+              Load More
+            </button>
+          </div>
         </section>
 
         <!-- Send Message Section -->
@@ -387,25 +397,6 @@
                   <div class="form-group">
                     <label>Media Attachment (Optional)</label>
                     <input type="hidden" id="messageMedia" />
-                    <!-- Selected Image Preview -->
-                    <div
-                      id="messageMediaPreview"
-                      class="media-preview-container mb-2"
-                      style="display: none"
-                    >
-                      <div style="position: relative; display: inline-block">
-                        <img
-                          src=""
-                          alt="Selected Media"
-                          style="
-                            max-height: 120px;
-                            border-radius: 8px;
-                            border: 1px solid var(--slate-200);
-                            box-shadow: var(--shadow-sm);
-                          "
-                        />
-                      </div>
-                    </div>
                     <div
                       class="media-input-wrapper"
                       style="display: flex; gap: 10px"
@@ -426,6 +417,25 @@
                       >
                         ✕
                       </button>
+                    </div>
+                    <!-- Selected Image Preview -->
+                    <div
+                      id="messageMediaPreview"
+                      class="media-preview-container mt-3"
+                      style="display: none"
+                    >
+                      <div style="position: relative; display: inline-block">
+                        <img
+                          src=""
+                          alt="Selected Media"
+                          style="
+                            max-height: 120px;
+                            border-radius: 8px;
+                            border: 1px solid var(--slate-200);
+                            box-shadow: var(--shadow-sm);
+                          "
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -586,25 +596,6 @@
                 <div class="form-group">
                   <label>Media Attachment (Optional)</label>
                   <input type="hidden" id="scheduleMedia" />
-                  <!-- Selected Image Preview -->
-                  <div
-                    id="scheduleMediaPreview"
-                    class="media-preview-container mb-2"
-                    style="display: none"
-                  >
-                    <div style="position: relative; display: inline-block">
-                      <img
-                        src=""
-                        alt="Selected Media"
-                        style="
-                          max-height: 120px;
-                          border-radius: 8px;
-                          border: 1px solid var(--slate-200);
-                          box-shadow: var(--shadow-sm);
-                        "
-                      />
-                    </div>
-                  </div>
                   <div
                     class="media-input-wrapper"
                     style="display: flex; gap: 10px"
@@ -625,6 +616,25 @@
                     >
                       ✕
                     </button>
+                  </div>
+                  <!-- Selected Image Preview -->
+                  <div
+                    id="scheduleMediaPreview"
+                    class="media-preview-container mt-3"
+                    style="display: none"
+                  >
+                    <div style="position: relative; display: inline-block">
+                      <img
+                        src=""
+                        alt="Selected Media"
+                        style="
+                          max-height: 120px;
+                          border-radius: 8px;
+                          border: 1px solid var(--slate-200);
+                          box-shadow: var(--shadow-sm);
+                        "
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

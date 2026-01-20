@@ -1,6 +1,6 @@
 from backend.schemas.auth import SendCodeRequest, VerifyCodeRequest, SessionStatusResponse, AuthResponse
 from backend.schemas.group import GroupCreate, GroupUpdate, GroupResponse, GroupSyncResponse
-from backend.schemas.media import MediaUploadResponse, MediaListResponse, MediaDeleteResponse
+from backend.schemas.media import MediaUploadResponse, MediaListResponse, MediaDeleteResponse, PaginatedMediaResponse
 from backend.schemas.message import MessageCreate, MessageUpdate, MessageResponse, MessageSendResponse
 
 __all__ = [
@@ -15,6 +15,7 @@ __all__ = [
     "MediaUploadResponse",
     "MediaListResponse",
     "MediaDeleteResponse",
+    "PaginatedMediaResponse",
     "MessageCreate",
     "MessageUpdate",
     "MessageResponse",
