@@ -45,6 +45,7 @@ def refresh_settings_cache(db: Session):
         "min_delay_seconds": int(settings_from_db.get("min_delay_seconds", 10)),
         "max_delay_seconds": int(settings_from_db.get("max_delay_seconds", 30)),
         "daily_message_limit": int(settings_from_db.get("daily_message_limit", 100)),
+        "timezone": settings_from_db.get("timezone", "UTC"),
     }
     print("Settings cache refreshed.")
 

@@ -10,9 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from backend.database import init_db, SessionLocal
-from backend.routers import auth, groups, media, messages, scheduler, admin, templates
+from backend.routers import auth, groups, media, messages, admin, templates
 from backend.routers import settings as settings_router
-from backend.services import scheduler_service, settings_service
+from backend.services import message_service, settings_service
 from backend.config import settings
 from backend.migrate_analytics import migrate as run_migration
 
@@ -35,12 +35,15 @@ async def lifespan(app: FastAPI):
     print("Database initialized")
     
     # Start scheduler
-    scheduler_service.start()
+    message_service.start()
     
     # Load scheduled messages
     db = SessionLocal()
     try:
-        scheduler_service.load_scheduled_messages(db)
+        # Cleanup stuck jobs (marked as sending but server restarted)
+        message_service.cleanup_stuck_jobs(db)
+        
+        message_service.load_scheduled_messages(db)
         settings_service.refresh_settings_cache(db)
     finally:
         db.close()
@@ -49,7 +52,7 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     print("Shutting down...")
-    scheduler_service.shutdown()
+    message_service.shutdown()
 
 
 # Create FastAPI app
@@ -74,7 +77,6 @@ app.include_router(auth.router)
 app.include_router(groups.router)
 app.include_router(media.router)
 app.include_router(messages.router)
-app.include_router(scheduler.router)
 app.include_router(settings_router.router)
 app.include_router(admin.router)
 app.include_router(templates.router)

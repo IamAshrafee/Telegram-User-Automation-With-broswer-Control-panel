@@ -1,7 +1,9 @@
 import { api } from "./app.js";
 import { allGroups } from "./groups.js";
-import { showToast, setButtonLoading } from "./ui-components.js";
+import { showToast, setButtonLoading, confirmAction } from "./ui-components.js";
 import { setupMessageHistory } from "./message-history.js";
+
+let scheduledJobs = [];
 
 export function setupMessages() {
   setupMessageHistory();
@@ -14,6 +16,12 @@ export function setupMessages() {
   const individualGroupsGroup = document.getElementById(
     "individualGroupsGroup",
   );
+
+  // New Scheduler elements
+  const scheduleCheck = document.getElementById("scheduleCheck");
+  const scheduleTimeGroup = document.getElementById("scheduleTimeGroup");
+  const scheduleDateTime = document.getElementById("scheduleDateTime");
+  const refreshScheduledBtn = document.getElementById("refreshScheduledBtn");
 
   // Add null checks
   if (!bulkSendCheck || !bulkPermissionGroup || !individualGroupsGroup) {
@@ -50,14 +58,51 @@ export function setupMessages() {
     }
   });
 
-  // Send message
+  // Schedule for later toggle
+  if (scheduleCheck) {
+    scheduleCheck.addEventListener("change", () => {
+      if (scheduleCheck.checked) {
+        scheduleTimeGroup.style.display = "block";
+        sendBtn.textContent = "📅 Schedule Message";
+      } else {
+        scheduleTimeGroup.style.display = "none";
+        sendBtn.textContent = "🚀 Send Message Now";
+      }
+    });
+  }
+
+  // Refresh scheduled jobs
+  if (refreshScheduledBtn) {
+    refreshScheduledBtn.addEventListener("click", () => {
+      loadScheduledJobs();
+    });
+  }
+
+  // Load scheduled jobs when tab is clicked
+  const scheduledTabBtn = document.querySelector(
+    '.tab-btn[data-tab="scheduled"]',
+  );
+  if (scheduledTabBtn) {
+    scheduledTabBtn.addEventListener("click", () => {
+      loadScheduledJobs();
+    });
+  }
+
+  // Send or Schedule message
   sendBtn.addEventListener("click", async () => {
     const text = messageText.value.trim();
     const link = document.getElementById("messageLink").value.trim();
     const mediaId = document.getElementById("messageMedia").value;
+    const isScheduled = scheduleCheck && scheduleCheck.checked;
+    const dateTime = scheduleDateTime.value;
 
     if (!text) {
       showToast("Please enter message text", "error");
+      return;
+    }
+
+    if (isScheduled && !dateTime) {
+      showToast("Please select date and time", "error");
       return;
     }
 
@@ -89,26 +134,71 @@ export function setupMessages() {
     }
 
     try {
-      setButtonLoading(sendBtn, true, "Sending...");
+      if (isScheduled) {
+        setButtonLoading(sendBtn, true, "Scheduling...");
+        await api.post("/messages/schedule", {
+          text: text,
+          link: link || null,
+          media_id: mediaId ? parseInt(mediaId) : null,
+          target_groups: groupIds,
+          scheduled_at: new Date(dateTime).toISOString(),
+        });
 
-      const response = await api.post("/messages/send", {
-        text: text,
-        link: link || null,
-        media_id: mediaId ? parseInt(mediaId) : null,
-        target_groups: groupIds,
-      });
+        showToast("Message scheduled successfully!", "success");
 
-      showToast(
-        `Message sent! Sent: ${response.sent_count}, Failed: ${response.failed_count}, Skipped: ${response.skipped_count}`,
-        "success",
-      );
+        // Reset inputs
+        messageText.value = "";
+        charCount.textContent = "0";
+        document.getElementById("messageLink").value = "";
+        document.getElementById("messageMedia").value = "";
+        scheduleDateTime.value = "";
+        scheduleCheck.checked = false;
+        scheduleCheck.dispatchEvent(new Event("change")); // Reset UI state
 
-      // DON'T reset the form - user requested this
-      // Only clear the message text
-      messageText.value = "";
-      charCount.textContent = "0";
+        // Switch to scheduled tab
+        if (scheduledTabBtn) {
+          scheduledTabBtn.click();
+        }
+      } else {
+        setButtonLoading(sendBtn, true, "Sending...");
+        const response = await api.post("/messages/send", {
+          text: text,
+          link: link || null,
+          media_id: mediaId ? parseInt(mediaId) : null,
+          target_groups: groupIds,
+        });
+
+        if (
+          response.sent_count === 0 &&
+          response.failed_count === 0 &&
+          response.skipped_count === 0
+        ) {
+          // Started in background
+          import("./progress-widget.js").then(({ progressWidget }) => {
+            progressWidget.startTracking(response.message_id);
+          });
+          showToast(
+            "Message sending started! Minimizing to progress card...",
+            "success",
+          );
+        } else {
+          showToast(
+            `Message processed! Sent: ${response.sent_count}, Failed: ${response.failed_count}, Skipped: ${response.skipped_count}`,
+            "success",
+          );
+        }
+
+        // DON'T reset the form - user requested this
+        // Only clear the message text
+        messageText.value = "";
+        charCount.textContent = "0";
+      }
     } catch (error) {
-      showToast("Failed to send message: " + error.message, "error");
+      showToast(
+        `Failed to ${isScheduled ? "schedule" : "send"} message: ` +
+          error.message,
+        "error",
+      );
     } finally {
       setButtonLoading(sendBtn, false);
     }
@@ -194,6 +284,164 @@ export function setupMessages() {
         setButtonLoading(previewBtn, false);
       }
     });
+  }
+}
+
+// Scheduled Jobs Logic (ported from scheduler.js)
+export async function loadScheduledJobs() {
+  try {
+    scheduledJobs = await api.get("/messages/scheduled");
+    renderScheduledJobs();
+    updateDashboardStats(); // If this exists
+  } catch (error) {
+    console.error("Error loading scheduled jobs:", error);
+  }
+}
+
+function renderScheduledJobs() {
+  const list = document.getElementById("scheduledList");
+  if (!list) return;
+
+  if (scheduledJobs.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">⏰</div>
+        <p class="empty-state-text">No active schedules</p>
+        <p class="empty-state-subtext">Messages scheduled for the future will appear here</p>
+      </div>
+    `;
+    return;
+  }
+
+  list.innerHTML = scheduledJobs
+    .map((job) => {
+      const date = new Date(job.scheduled_at);
+      const dayName = date.toLocaleDateString(undefined, { weekday: "short" });
+      const dayNum = date.getDate();
+      const fullDate = date.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+
+      // Time with explicitly showing the timezone code (e.g. EST, GMT, etc.)
+      const timeStr = date.toLocaleTimeString(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZoneName: "short",
+      });
+
+      const groups = job.target_groups || [];
+      const groupsCount = groups.length;
+
+      // Create a snippet of target groups: "Group A, Group B + 3 others"
+      let groupText = "No groups";
+      if (groupsCount > 0) {
+        // We only have IDs in the job usually, unless we fetch details.
+        // But we have 'allGroups' imported! Let's try to map names.
+        const groupNames = groups.map((gid) => {
+          const g = allGroups.find((x) => x.id === gid);
+          return g ? g.title : `ID:${gid}`;
+        });
+
+        if (groupsCount <= 2) {
+          groupText = groupNames.join(", ");
+        } else {
+          groupText = `${groupNames.slice(0, 2).join(", ")} + ${groupsCount - 2} others`;
+        }
+      }
+
+      // Calculate "starts in" calculation
+      const now = new Date();
+      const diffMs = date - now;
+      const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+      let relativeTime = "";
+      let countdownClass = "countdown";
+
+      if (diffMs < 0) {
+        relativeTime = "Running Soon...";
+        countdownClass = "time"; // Neutral style for running/overdue
+      } else if (diffHrs > 48) {
+        const days = Math.floor(diffHrs / 24);
+        relativeTime = `In ${days} days`;
+      } else if (diffHrs > 0) {
+        relativeTime = `In ${diffHrs}h ${diffMins}m`;
+      } else {
+        relativeTime = `In ${diffMins} mins`;
+      }
+
+      // Message Snippet
+      const msgSnippet = job.text
+        ? job.text.length > 60
+          ? job.text.substring(0, 60) + "..."
+          : job.text
+        : "Image/Media Message";
+
+      return `
+        <div class="scheduled-card" title="Scheduled for ${fullDate} at ${timeStr}">
+            <div class="scheduled-icon">
+                <span class="day">${dayName}</span>
+                <span class="date">${dayNum}</span>
+            </div>
+            <div class="scheduled-info">
+                <div class="scheduled-header">
+                     <div class="scheduled-title">${msgSnippet}</div>
+                </div>
+                
+                <div class="scheduled-targets">
+                    <span>📡 Sending to:</span>
+                    <span style="font-weight: 500; color: var(--text-main);">${groupText}</span>
+                </div>
+
+                <div class="scheduled-meta">
+                    <span class="meta-badge time">
+                        📅 ${fullDate}
+                    </span>
+                    <span class="meta-badge time">
+                        ⏰ ${timeStr}
+                    </span>
+                    <span class="meta-badge ${countdownClass}">
+                        ⏳ ${relativeTime}
+                    </span>
+                </div>
+            </div>
+            <div class="scheduled-actions">
+                 <button class="btn btn-outline-danger btn-sm" onclick="cancelScheduledJob(${job.id})" title="Cancel Schedule">
+                    🗑️ Cancel
+                 </button>
+            </div>
+        </div>
+    `;
+    })
+    .join("");
+}
+
+export async function cancelScheduledJob(jobId) {
+  const confirmed = await confirmAction(
+    "Are you sure you want to cancel this scheduled message?",
+    { title: "Cancel Scheduled Message", confirmText: "Cancel Message" },
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await api.delete(`/messages/scheduled/${jobId}`);
+    await loadScheduledJobs();
+    showToast("Scheduled message cancelled", "success");
+  } catch (error) {
+    showToast("Failed to cancel: " + error.message, "error");
+  }
+}
+
+// Make it globally available for onclick
+window.cancelScheduledJob = cancelScheduledJob;
+
+function updateDashboardStats() {
+  const statEl = document.getElementById("scheduledMessages");
+  if (statEl) {
+    statEl.textContent = scheduledJobs.length;
   }
 }
 

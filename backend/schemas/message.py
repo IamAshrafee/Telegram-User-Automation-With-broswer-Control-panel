@@ -30,6 +30,12 @@ class MessageResponse(BaseModel):
     media_id: Optional[int] = None
     target_groups: List[int]
     status: MessageStatus
+    
+    # Progress info
+    processed_count: int = 0
+    total_count: int = 0
+    group_status: dict = {}
+    
     scheduled_at: Optional[datetime] = None
     sent_at: Optional[datetime] = None
     created_at: datetime

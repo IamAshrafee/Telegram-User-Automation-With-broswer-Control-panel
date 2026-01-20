@@ -76,10 +76,7 @@
             <span class="icon">✉️</span>
             <span>Send Message</span>
           </a>
-          <a href="#" class="nav-item" data-section="scheduler">
-            <span class="icon">⏰</span>
-            <span>Scheduler</span>
-          </a>
+
           <a href="#" class="nav-item" data-section="settings">
             <span class="icon">⚙️</span>
             <span>Settings</span>
@@ -321,6 +318,7 @@
             <button class="tab-btn active" data-tab="compose">
               📝 Compose
             </button>
+            <button class="tab-btn" data-tab="scheduled">📅 Scheduled</button>
             <button class="tab-btn" data-tab="history">📜 History</button>
           </div>
 
@@ -382,9 +380,14 @@
                   </div>
 
                   <div class="form-group">
-                    <label for="messageLink">Attachment Link (Optional)</label>
-                    <div class="input-group">
+                    <div style="display: flex; align-items: center">
                       <span class="input-icon">🔗</span>
+                      <label for="messageLink"
+                        >Attachment Link (Optional)</label
+                      >
+                    </div>
+
+                    <div class="input-group">
                       <input
                         type="url"
                         id="messageLink"
@@ -456,8 +459,47 @@
                         text-transform: uppercase;
                       "
                     >
-                      🎯 Targeting
+                      🎯 Targeting & Schedule
                     </h4>
+
+                    <!-- Schedule Toggle -->
+                    <div class="form-group mb-4">
+                      <label
+                        class="checkbox-label"
+                        style="
+                          display: flex;
+                          gap: 8px;
+                          cursor: pointer;
+                          align-items: center;
+                        "
+                      >
+                        <input
+                          type="checkbox"
+                          id="scheduleCheck"
+                          style="width: 18px; height: 18px"
+                        />
+                        <span style="font-weight: 600">Schedule for Later</span>
+                      </label>
+                    </div>
+
+                    <div
+                      id="scheduleTimeGroup"
+                      class="form-group mb-4"
+                      style="display: none; animation: fadeIn 0.3s ease"
+                    >
+                      <label for="scheduleDateTime">Date & Time *</label>
+                      <input
+                        type="datetime-local"
+                        id="scheduleDateTime"
+                        style="
+                          width: 100%;
+                          font-size: 1rem;
+                          padding: 10px;
+                          border: 1px solid var(--color-border);
+                          border-radius: 6px;
+                        "
+                      />
+                    </div>
 
                     <div class="form-group mb-4">
                       <label
@@ -526,6 +568,9 @@
                   </button>
                 </div>
               </div>
+              
+              <!-- Embedded Progress Widget -->
+              <div id="embedded-progress-container" class="mt-6"></div>
             </div>
           </div>
 
@@ -560,176 +605,22 @@
               </div>
             </div>
           </div>
-        </section>
 
-        <!-- Scheduler Section -->
-        <section id="scheduler" class="content-section">
-          <div class="section-header">
-            <h2>Schedule Message</h2>
-          </div>
-
-          <div class="message-composer">
-            <div class="composer-grid">
-              <!-- Left: Content -->
-              <div class="composer-main">
-                <div class="form-group">
-                  <label for="scheduleText">Message Text *</label>
-                  <textarea
-                    id="scheduleText"
-                    rows="8"
-                    placeholder="Message to schedule..."
-                    style="font-family: inherit; line-height: 1.6"
-                  ></textarea>
-                </div>
-                <div class="form-group">
-                  <label for="scheduleLink">Link (optional)</label>
-                  <div class="input-group">
-                    <span class="input-icon">🔗</span>
-                    <input
-                      type="url"
-                      id="scheduleLink"
-                      placeholder="https://example.com"
-                      style="padding-left: 2.5rem"
-                    />
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>Media Attachment (Optional)</label>
-                  <input type="hidden" id="scheduleMedia" />
-                  <div
-                    class="media-input-wrapper"
-                    style="display: flex; gap: 10px"
-                  >
-                    <button
-                      type="button"
-                      id="selectScheduleMedia"
-                      class="btn btn-secondary"
-                      style="flex: 1"
-                    >
-                      🖼️ Select Image
-                    </button>
-                    <button
-                      type="button"
-                      id="clearScheduleMedia"
-                      class="btn btn-outline-danger"
-                      style="display: none"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <!-- Selected Image Preview -->
-                  <div
-                    id="scheduleMediaPreview"
-                    class="media-preview-container mt-3"
-                    style="display: none"
-                  >
-                    <div style="position: relative; display: inline-block">
-                      <img
-                        src=""
-                        alt="Selected Media"
-                        style="
-                          max-height: 120px;
-                          border-radius: 8px;
-                          border: 1px solid var(--slate-200);
-                          box-shadow: var(--shadow-sm);
-                        "
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Right: Settings -->
-              <div class="composer-sidebar">
-                <div
-                  class="card p-4"
-                  style="
-                    background: var(--slate-50);
-                    border: 1px solid var(--slate-200);
-                  "
-                >
-                  <h4
-                    class="mb-3"
-                    style="font-size: var(--text-sm); text-transform: uppercase"
-                  >
-                    ⏰ Timing & Target
-                  </h4>
-
-                  <div class="form-group">
-                    <label for="scheduleDateTime">Date & Time *</label>
-                    <input
-                      type="datetime-local"
-                      id="scheduleDateTime"
-                      style="width: 100%; font-size: 1rem; padding: 10px"
-                    />
-                  </div>
-
-                  <div class="form-group mt-4">
-                    <label
-                      class="checkbox-label"
-                      style="
-                        display: flex;
-                        gap: 8px;
-                        cursor: pointer;
-                        align-items: center;
-                      "
-                    >
-                      <input
-                        type="checkbox"
-                        id="bulkScheduleCheck"
-                        style="width: 18px; height: 18px"
-                      />
-                      <span style="font-weight: 600">Bulk Schedule</span>
-                    </label>
-                  </div>
-
-                  <div
-                    class="form-group"
-                    id="bulkSchedulePermissionGroup"
-                    style="display: none"
-                  >
-                    <label for="bulkSchedulePermission">Permission Type</label>
-                    <select id="bulkSchedulePermission">
-                      <option value="">Choose permission...</option>
-                      <option value="all">All Content</option>
-                      <option value="text_only">Text Only</option>
-                      <option value="text_link">Text + Link</option>
-                      <option value="text_image">Text + Image</option>
-                      <option value="text_link_image">
-                        Text + Link + Image
-                      </option>
-                    </select>
-                  </div>
-                  <div class="form-group" id="individualScheduleGroupsGroup">
-                    <label>Target Groups *</label>
-                    <div
-                      id="scheduleGroupSelector"
-                      class="group-selector"
-                      style="
-                        max-height: 200px;
-                        overflow-y: auto;
-                        background: white;
-                        padding: 10px;
-                        border: 1px solid var(--color-border);
-                        border-radius: 6px;
-                      "
-                    ></div>
-                  </div>
-                </div>
-
-                <button
-                  id="scheduleMessageBtn"
-                  class="btn btn-primary btn-large shadow-lg"
-                >
-                  📅 Schedule Message
-                </button>
+          <!-- Scheduled Tab -->
+          <div id="scheduledTab" class="tab-content" style="display: none">
+            <div class="section-header">
+              <h3>Scheduled Messages</h3>
+              <button id="refreshScheduledBtn" class="btn btn-secondary btn-sm">
+                🔄 Refresh
+              </button>
+            </div>
+            <div id="scheduledList" class="scheduled-list">
+              <!-- Content populated by JS -->
+              <div class="empty-state">
+                <p class="text-secondary">No scheduled messages</p>
               </div>
             </div>
           </div>
-          <div class="section-header">
-            <h3>Scheduled Messages</h3>
-          </div>
-          <div id="scheduledList" class="scheduled-list"></div>
         </section>
 
         <!-- Media Library Section -->
@@ -882,6 +773,31 @@
                   placeholder="100"
                 />
                 <span class="help-text">Maximum: 1000 messages per day</span>
+              </div>
+              <div class="settings-card">
+              <h3>🌍 Your Timezone</h3>
+              <p class="settings-description">
+                Ensure scheduled messages are sent at the correct time for your location
+              </p>
+              <div class="form-group">
+                <label for="timezoneSelect">Select Timezone</label>
+                <select id="timezoneSelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--color-border);">
+                  <option value="UTC">UTC (Universal Time)</option>
+                  <option value="Asia/Dhaka">Asia/Dhaka (Bangladesh)</option>
+                  <option value="Asia/Kolkata">Asia/Kolkata (India)</option>
+                  <option value="Asia/Singapore">Asia/Singapore</option>
+                  <option value="Asia/Dubai">Asia/Dubai</option>
+                  <option value="Europe/London">Europe/London</option>
+                  <option value="Europe/Berlin">Europe/Berlin</option>
+                  <option value="America/New_York">America/New_York (Eastern)</option>
+                  <option value="America/Chicago">America/Chicago (Central)</option>
+                  <option value="America/Denver">America/Denver (Mountain)</option>
+                  <option value="America/Los_Angeles">America/Los_Angeles (Pacific)</option>
+                  <option value="Australia/Sydney">Australia/Sydney</option>
+                </select>
+                <span class="help-text">Select YOUR local timezone. The server will handle the conversion.</span>
+              </div>
+            </div>
               </div>
             </div>
 

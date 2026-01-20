@@ -92,25 +92,26 @@ function renderGroups() {
     .map(
       (group) => `
         <div class="group-card">
-            <div class="group-checkbox-wrapper">
-                <input 
-                    type="checkbox" 
-                    class="group-select-checkbox" 
-                    data-group-id="${group.id}"
-                    ${selectedGroupIds.has(group.id) ? "checked" : ""}
-                />
-            </div>
-            <div class="group-content">
-                <div class="group-header">
+            <div class="group-content" style="display: flex; flex-direction: column; gap: 10px">
+            <div style="display: flex; align-items: center; gap: 10px">
+                <div class="group-checkbox-wrapper">
+                    <input 
+                        type="checkbox" 
+                        class="group-select-checkbox" 
+                        data-group-id="${group.id}"
+                        ${selectedGroupIds.has(group.id) ? "checked" : ""}
+                    />
+                </div>
+                <div class="group-header" style="display: flex; justify-content: space-between; align-items: center; gap: 10px">
                     <h3 class="group-title">${group.title}</h3>
-                    <span class="group-status">
+                </div></div>
+                <div class="group-meta" style="display: flex; align-items: center; gap: 10px">
+                <span class="group-status">
                         ${group.is_active ? "✅ Active" : "❌ Inactive"}
                     </span>
-                </div>
-                <div class="group-meta">
                     <span class="badge">${formatPermissionType(group.permission_type)}</span>
                 </div>
-                <div class="group-controls">
+                <div class="group-controls" style="display: flex; align-items: center; gap: 10px">
                     <select class="permission-select" data-group-id="${group.id}">
                         <option value="all" ${group.permission_type === "all" ? "selected" : ""}>All Content</option>
                         <option value="text_only" ${group.permission_type === "text_only" ? "selected" : ""}>Text Only</option>
@@ -370,14 +371,13 @@ export function renderGroupSelectors() {
     const html =
       '<p class="text-secondary p-4">No active groups. Please sync groups first.</p>';
     document.getElementById("groupSelector").innerHTML = html;
-    document.getElementById("scheduleGroupSelector").innerHTML = html;
     return;
   }
 
   const html = activeGroups
     .map(
       (group) => `
-        <div class="group-checkbox">
+        <div class="group-checkbox" style="display: flex; align-items: center; gap: 10px">
             <input type="checkbox" id="group-${group.id}" value="${group.id}" class="group-check" />
             <label for="group-${group.id}">${group.title} <span class="text-muted text-sm">(${formatPermissionType(group.permission_type)})</span></label>
         </div>
@@ -386,7 +386,6 @@ export function renderGroupSelectors() {
     .join("");
 
   document.getElementById("groupSelector").innerHTML = html;
-  document.getElementById("scheduleGroupSelector").innerHTML = html;
 }
 
 function updateDashboardStats() {

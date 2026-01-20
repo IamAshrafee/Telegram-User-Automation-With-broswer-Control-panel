@@ -17,6 +17,7 @@ def get_settings() -> SettingResponse:
         "min_delay_seconds": settings_service.get_setting("min_delay_seconds"),
         "max_delay_seconds": settings_service.get_setting("max_delay_seconds"),
         "daily_message_limit": settings_service.get_setting("daily_message_limit"),
+        "timezone": settings_service.get_setting("timezone", "UTC"),
     }
 
 

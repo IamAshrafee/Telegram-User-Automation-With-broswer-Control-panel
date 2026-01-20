@@ -31,6 +31,22 @@ def migrate():
         if 'last_message_at' not in columns:
             print("Adding last_message_at column...")
             cursor.execute("ALTER TABLE groups ADD COLUMN last_message_at TIMESTAMP")
+            
+        # --- Messages Table Migration ---
+        cursor.execute("PRAGMA table_info(messages)")
+        msg_columns = [col[1] for col in cursor.fetchall()]
+        
+        if 'group_status' not in msg_columns:
+            print("Adding group_status column to messages...")
+            cursor.execute("ALTER TABLE messages ADD COLUMN group_status JSON DEFAULT '{}'")
+            
+        if 'processed_count' not in msg_columns:
+            print("Adding processed_count column to messages...")
+            cursor.execute("ALTER TABLE messages ADD COLUMN processed_count INTEGER DEFAULT 0")
+            
+        if 'total_count' not in msg_columns:
+            print("Adding total_count column to messages...")
+            cursor.execute("ALTER TABLE messages ADD COLUMN total_count INTEGER DEFAULT 0")
         
         conn.commit()
         print("✅ Migration completed successfully!")

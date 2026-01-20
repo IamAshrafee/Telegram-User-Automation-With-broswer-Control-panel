@@ -2,7 +2,7 @@ import { api } from "./app.js";
 import { showToast, confirmAction } from "./ui-components.js";
 import { loadGroups } from "./groups.js";
 import { loadMedia } from "./media.js";
-import { loadScheduledJobs } from "./scheduler.js";
+import { loadScheduledJobs } from "./messages.js";
 
 let currentSettings = {};
 
@@ -22,6 +22,8 @@ function renderSettings() {
     currentSettings.max_delay_seconds || 30;
   document.getElementById("dailyLimit").value =
     currentSettings.daily_message_limit || 100;
+  document.getElementById("timezoneSelect").value =
+    currentSettings.timezone || "UTC";
 }
 
 export function setupSettings() {
@@ -41,6 +43,7 @@ export function setupSettings() {
     const minDelay = parseInt(minDelayInput.value);
     const maxDelay = parseInt(maxDelayInput.value);
     const dailyLimit = parseInt(dailyLimitInput.value);
+    const timezone = document.getElementById("timezoneSelect").value;
 
     if (!validateAll(minDelay, maxDelay, dailyLimit)) {
       return;
@@ -54,9 +57,10 @@ export function setupSettings() {
         min_delay_seconds: minDelay,
         max_delay_seconds: maxDelay,
         daily_message_limit: dailyLimit,
+        timezone: timezone,
       };
 
-      await api.post("/settings/", currentSettings);
+      await api.put("/settings/", currentSettings);
       showToast("Settings saved successfully!", "success");
     } catch (error) {
       showToast("Failed to save settings: " + error.message, "error");
@@ -82,9 +86,10 @@ export function setupSettings() {
         min_delay_seconds: 10,
         max_delay_seconds: 30,
         daily_message_limit: 100,
+        timezone: "UTC",
       };
 
-      await api.post("/settings/", defaults);
+      await api.put("/settings/", defaults);
       await loadSettings();
       showToast("Settings reset to defaults!", "success");
     } catch (error) {

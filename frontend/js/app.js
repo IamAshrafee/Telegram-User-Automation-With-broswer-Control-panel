@@ -149,11 +149,11 @@ export function formatDate(dateString) {
 import { checkAuthStatus, setupAuth } from "./auth.js";
 import { setupGroups, loadGroups, renderGroupSelectors } from "./groups.js";
 import { setupMedia, loadMedia } from "./media.js";
-import { setupMessages } from "./messages.js";
-import { setupScheduler, loadScheduledJobs } from "./scheduler.js";
+import { setupMessages, loadScheduledJobs } from "./messages.js";
 import { setupSettings, loadSettings } from "./settings.js";
 import { setupTemplates } from "./templates.js";
 import { setupTabs } from "./ui-components.js";
+import { progressWidget } from "./progress-widget.js";
 
 // Initialize app
 document.addEventListener("DOMContentLoaded", async () => {
@@ -163,10 +163,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupGroups();
   setupMedia();
   setupMessages();
-  setupScheduler();
   setupSettings();
   setupTemplates();
   setupTabs();
+
+  // Init progress widget (checks for active jobs)
+  progressWidget.init();
 
   // Start rate limit monitoring
   import("./rate-limit.js").then((module) => {

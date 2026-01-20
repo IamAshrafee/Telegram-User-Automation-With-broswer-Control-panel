@@ -24,6 +24,12 @@ class Message(Base):
     media_id = Column(Integer, ForeignKey("media.id"), nullable=True)
     target_groups = Column(JSON, nullable=False)  # Array of group IDs
     status = Column(SQLEnum(MessageStatus), default=MessageStatus.DRAFT)
+    
+    # Progress tracking
+    group_status = Column(JSON, default=dict)  # Status of each group: {group_id: {status: 'sent', error: None}}
+    processed_count = Column(Integer, default=0)
+    total_count = Column(Integer, default=0)
+    
     scheduled_at = Column(DateTime(timezone=True), nullable=True)  # Null for immediate send
     sent_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

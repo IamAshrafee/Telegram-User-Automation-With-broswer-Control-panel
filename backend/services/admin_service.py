@@ -3,7 +3,7 @@ from backend.models.media import Media
 from backend.models.group import Group
 from backend.models.message import Message
 from backend.models.session import TelegramSession
-from backend.services import scheduler_service
+from backend.services import message_service
 from backend.config import settings
 from pathlib import Path
 import shutil
@@ -14,53 +14,9 @@ def clear_media_data(db: Session) -> tuple[int, int]:
     Delete all media records from database and files from storage.
     Returns: (records_deleted, files_deleted)
     """
-    # Get count before deletion
-    media_count = db.query(Media).count()
-    
-    # Delete files from storage
-    media_path = Path(settings.media_path)
-    files_deleted = 0
-    
-    if media_path.exists():
-        for file_obj in media_path.glob('*'):
-            if file_obj.is_file():
-                try:
-                    file_obj.unlink()
-                    files_deleted += 1
-                except Exception as e:
-                    print(f"Error deleting file {file_obj}: {e}")
-    
-    # Delete database records
-    db.query(Media).delete()
-    db.commit()
-    
-    return media_count, files_deleted
+    # ... (existing code)
 
-
-def clear_groups_data(db: Session) -> int:
-    """
-    Delete all group records from database.
-    Returns: number of records deleted
-    """
-    group_count = db.query(Group).count()
-    db.query(Group).delete()
-    db.commit()
-    return group_count
-
-
-def clear_messages_data(db: Session) -> int:
-    """
-    Delete all message history from database (excluding scheduled).
-    Returns: number of records deleted
-    """
-    message_count = db.query(Message).filter(
-        Message.status != 'scheduled'
-    ).count()
-    
-    db.query(Message).filter(Message.status != 'scheduled').delete()
-    db.commit()
-    return message_count
-
+# ... (existing code)
 
 def clear_scheduled_data(db: Session) -> int:
     """
@@ -68,7 +24,7 @@ def clear_scheduled_data(db: Session) -> int:
     Returns: number of records deleted
     """
     # Cancel all scheduled jobs in the scheduler
-    scheduler_service.cancel_all_jobs()
+    message_service.cancel_all_jobs()
     
     # Delete scheduled messages from database
     scheduled_count = db.query(Message).filter(
@@ -97,7 +53,7 @@ def clear_all_except_auth(db: Session) -> dict:
     stats['groups'] = clear_groups_data(db)
     
     # Clear all messages (sent and scheduled)
-    scheduler_service.cancel_all_jobs()
+    message_service.cancel_all_jobs()
     message_count = db.query(Message).count()
     db.query(Message).delete()
     db.commit()
