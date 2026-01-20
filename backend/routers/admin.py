@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.database import get_db
-from backend.services import admin_service
+from backend.services import admin_service, settings_service
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -12,21 +12,29 @@ async def get_rate_limit_status(db: Session = Depends(get_db)):
     from backend.models import Message, MessageStatus
     from datetime import datetime, timedelta
     
-    # Get settings from database
-    try:
-        from backend.models import Setting
-        settings_dict = Setting.get_all(db)
-        daily_limit = int(settings_dict.get("daily_message_limit", 100))
-    except Exception:
-        daily_limit = 100
+    # Get settings from service (cached)
+    daily_limit = settings_service.get_setting("daily_message_limit", 100)
     
     today = datetime.now().date()
     
     # Count messages sent today
-    sent_today = db.query(Message).filter(
-        Message.created_at >= datetime.combine(today, datetime.min.time()),
-        Message.status == MessageStatus.SENT
-    ).count()
+    start_of_day = datetime.combine(today, datetime.min.time())
+    
+    sent_today = 0
+    
+    # Get all messages associated with today
+    # Note: Using 'sent_at' corresponds to when the batch started. 
+    # This might edge-case cross-day batches, but consistent with safety limit.
+    today_messages = db.query(Message).filter(
+        Message.status == MessageStatus.SENT,
+        Message.sent_at >= start_of_day
+    ).all()
+    
+    for msg in today_messages:
+        if msg.group_status:
+            for info in msg.group_status.values():
+                if info.get("status") == "sent":
+                    sent_today += 1
     
     remaining = max(0, daily_limit - sent_today)
     percentage_used = (sent_today / daily_limit * 100) if daily_limit > 0 else 0

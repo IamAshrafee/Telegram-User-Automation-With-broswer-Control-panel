@@ -24,10 +24,6 @@ class MessageService:
         # Scheduler init
         self.scheduler = AsyncIOScheduler()
         self.is_running = False
-        
-        # Message sending limits init
-        self.daily_count = 0
-        self.last_reset = datetime.now()
 
     # --- Scheduler Methods ---
 
@@ -130,19 +126,39 @@ class MessageService:
         db.commit()
 
     # --- Message Sending Methods ---
-
-    def _check_daily_limit(self) -> bool:
-        """Check if daily message limit has been reached."""
-        # Reset counter if it's a new day
-        if datetime.now().date() > self.last_reset.date():
-            self.daily_count = 0
-            self.last_reset = datetime.now()
-        
-        return self.daily_count < settings_service.get_setting('daily_message_limit')
     
-    def _increment_daily_count(self):
-        """Increment daily message counter."""
-        self.daily_count += 1
+    def _check_daily_limit(self, db: Session) -> bool:
+        """
+        Check if daily message limit has been reached by counting actual DB records.
+        """
+        limit = settings_service.get_setting('daily_message_limit', 100)
+        
+        # Calculate start of today (local server time)
+        today = datetime.now().date()
+        start_of_day = datetime.combine(today, datetime.min.time())
+        
+        # Fetch all messages that have sent activity today
+        # We look for messages sent_at >= today. 
+        # Note: A message might have been started yesterday and finished today? 
+        # For simplicity, we assume 'sent_at' is when the bulk batch started/finished.
+        # Ideally we'd timestamp each individual send, but 'sent_at' is the batch timestamp.
+        # This is the best approximation without a dedicated 'MessageDelivery' table.
+        messages_today = db.query(Message).filter(
+            Message.status.in_([MessageStatus.SENT, MessageStatus.SENDING]),
+            Message.sent_at >= start_of_day
+        ).all()
+        
+        sent_count = 0
+        for msg in messages_today:
+            # Count how many groups in this message actually have 'sent' status
+            if msg.group_status:
+                for target_id, info in msg.group_status.items():
+                    if info.get("status") == "sent":
+                        sent_count += 1
+                        
+        return sent_count < limit
+    
+    # _increment_daily_count is no longer needed as DB updates happen via message status change
     
     async def _apply_safety_delay(self):
         """Apply random delay between messages."""
@@ -168,8 +184,18 @@ class MessageService:
         # Initialize status if empty
         if not message.group_status:
            initial_status = {}
+           
+           # Pre-fetch group titles to avoid "Unknown Group" in UI
+           groups = db.query(Group.id, Group.title).filter(Group.id.in_(message.target_groups)).all()
+           group_map = {g.id: g.title for g in groups}
+           
            for gid in message.target_groups:
-              initial_status[str(gid)] = {"status": "queued", "updated_at": datetime.now().isoformat()}
+              g_title = group_map.get(gid, "Unknown Group")
+              initial_status[str(gid)] = {
+                  "status": "queued", 
+                  "group_name": g_title,
+                  "updated_at": datetime.now().isoformat()
+              }
            message.group_status = initial_status
            message.total_count = len(message.target_groups)
            message.processed_count = 0
@@ -196,16 +222,22 @@ class MessageService:
         # Send to each target group
         for i, group_id in enumerate(message.target_groups):
             # Check daily limit
-            if not self._check_daily_limit():
+            if not self._check_daily_limit(db):
                 print(f"Daily limit reached ({settings_service.get_setting('daily_message_limit')})")
                 
                 # Mark remaining as skipped
                 remaining = message.target_groups[i:]
                 current_status = dict(message.group_status) # Copy to mutate
+                
+                # Fetch group info for better reporting (bulk fetch would be better but simple iteration is fine for now)
                 for rid in remaining:
+                    group_info = db.query(Group.title).filter(Group.id == rid).first()
+                    g_name = group_info[0] if group_info else "Unknown Group"
+                    
                     current_status[str(rid)] = {
                         "status": "skipped", 
                         "reason": "daily_limit",
+                        "group_name": g_name,
                         "updated_at": datetime.now().isoformat()
                     }
                 message.group_status = current_status
@@ -275,7 +307,7 @@ class MessageService:
                 
                 if success:
                     sent_count += 1
-                    self._increment_daily_count()
+                    # DB is automatically updated below
                     
                     # Update group stats
                     group.messages_sent += 1

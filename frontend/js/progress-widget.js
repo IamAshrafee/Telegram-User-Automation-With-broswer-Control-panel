@@ -15,7 +15,15 @@ class ProgressWidget {
   }
 
   createWidgetDOM() {
-    if (document.getElementById("progress-widget")) return;
+    if (document.getElementById("progress-widget")) return; // Already exists
+
+    // Target the embedded container first
+    const container = document.getElementById("embedded-progress-container");
+    if (!container) {
+      console.warn(
+        "Embedded progress container not found, falling back to body",
+      );
+    }
 
     const div = document.createElement("div");
     div.id = "progress-widget";
@@ -27,7 +35,7 @@ class ProgressWidget {
           <h3>Sending Messages...</h3>
         </div>
         <div class="progress-controls">
-          <button id="minimizeProgressBtn" class="btn-icon">_</button>
+          <button id="minimizeProgressBtn" class="btn-icon" title="Toggle Detail">_</button>
         </div>
       </div>
       <div class="progress-body">
@@ -53,13 +61,32 @@ class ProgressWidget {
         </div>
       </div>
     `;
-    document.body.appendChild(div);
+
+    // Append to container if exists, else body (but if body, it needs fixed position styles)
+    if (container) {
+      container.innerHTML = ""; // Clear any previous
+      container.appendChild(div);
+      // Make sure container is visible
+      container.style.display = "block";
+    } else {
+      document.body.appendChild(div);
+    }
+
     this.container = div;
 
     // Minimize toggle
     const body = div.querySelector(".progress-body");
-    div.querySelector("#minimizeProgressBtn").onclick = () => {
-      body.classList.toggle("hidden");
+    const toggleBtn = div.querySelector("#minimizeProgressBtn");
+
+    toggleBtn.onclick = () => {
+      const isHidden = body.classList.contains("hidden");
+      if (isHidden) {
+        body.classList.remove("hidden");
+        toggleBtn.textContent = "_";
+      } else {
+        body.classList.add("hidden");
+        toggleBtn.textContent = "□"; // Maximise icon
+      }
     };
   }
 

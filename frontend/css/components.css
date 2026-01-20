@@ -1568,7 +1568,37 @@ textarea::placeholder {
   }
 }
 
-/* Progress Widget */
+/* Progress Widget (Floating Sticky Card) */
+.progress-widget {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 380px;
+  max-width: 90vw;
+  background: white;
+  border-radius: 12px;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  z-index: 1000;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.progress-widget.hidden {
+  transform: translateY(20px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Ensure embedded container doesn't mess with fixed positioning if used */
+#embedded-progress-container {
+  min-height: 0; /* collapsed when empty */
+}
+
+/* Progress Widget Inner Styles */
 
 .progress-header {
   padding: 12px 16px;
