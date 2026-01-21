@@ -146,7 +146,7 @@ function renderMedia(media) {
     .map(
       (item) => `
     <div class="media-card" data-id="${item.id}" style="animation-delay: ${Math.random() * 0.2}s">
-        <div class="media-card-img-wrapper" style="aspect-ratio: 16/10;">
+        <div class="media-card-img-wrapper">
             <img src="${API_BASE}${item.url}" alt="${item.filename}" loading="lazy">
             <div class="media-card-overlay">
                 <button class="btn btn-danger btn-sm shadow-lg" onclick="deleteMedia(${item.id})">
@@ -294,8 +294,21 @@ export function setupImageSelector() {
 
   selectBtn.addEventListener("click", () => {
     modal.classList.remove("hidden");
-    renderSelectorGallery();
+    const searchInput = document.getElementById("selectorSearch");
+    if (searchInput) searchInput.value = "";
+    renderSelectorGallery(allMedia);
   });
+
+  const searchInput = document.getElementById("selectorSearch");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const filtered = q
+        ? allMedia.filter((m) => m.filename.toLowerCase().includes(q))
+        : allMedia;
+      renderSelectorGallery(filtered);
+    });
+  }
 
   if (closeBtn)
     closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
@@ -313,18 +326,18 @@ export function setupImageSelector() {
     });
   }
 
-  function renderSelectorGallery() {
+  function renderSelectorGallery(items = allMedia) {
     if (!gallery) return;
 
-    if (allMedia.length === 0) {
+    if (items.length === 0) {
       gallery.innerHTML =
-        '<p class="text-center p-8 text-muted">No media found. Upload some in the Media Library first!</p>';
+        '<p class="text-center p-8 text-muted">No media found.</p>';
       return;
     }
 
     gallery.innerHTML = `
       <div class="image-selector-grid">
-        ${allMedia
+        ${items
           .map(
             (item) => `
           <div class="image-selector-item" data-id="${item.id}" data-url="${item.url}">

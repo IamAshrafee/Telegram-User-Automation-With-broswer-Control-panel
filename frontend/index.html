@@ -902,7 +902,12 @@
     <div id="imageSelectorModal" class="modal hidden">
       <div class="modal-content image-selector-modal">
         <div class="modal-header">
-          <h2>Select Image</h2>
+          <div class="d-flex align-items-center gap-4 flex-1">
+            <h2 class="mb-0">Select Image</h2>
+            <div class="search-wrapper selector-search">
+              <input type="text" id="selectorSearch" placeholder="Search items..." class="form-control" />
+            </div>
+          </div>
           <button id="closeImageSelector" class="close-btn">✕</button>
         </div>
         <div id="imageSelectorGallery" class="image-selector-gallery"></div>

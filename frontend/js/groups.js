@@ -148,13 +148,23 @@ function renderGroups(groups) {
   }
 
   groupsList.innerHTML = filtered
-    .map(
-      (group) => `
-    <div class="group-card ${group.is_active ? "active" : ""}">
+    .map((group, index) => {
+      const escapedSearch = searchTerm
+        ? searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+        : "";
+      const titleHtml = escapedSearch
+        ? group.title.replace(
+            new RegExp(`(${escapedSearch})`, "gi"),
+            '<span class="highlight">$1</span>',
+          )
+        : group.title;
+
+      return `
+    <div class="group-card ${group.is_active ? "active" : ""}" style="animation-delay: ${index * 0.05}s">
         <div class="group-header">
             <div class="d-flex align-items-center">
                 <input type="checkbox" class="group-checkbox" data-id="${group.id}" onclick="event.stopPropagation()">
-                <h3 class="ml-2">${group.title}</h3>
+                <h3 class="ml-2">${titleHtml}</h3>
             </div>
             <div class="group-status">
                 <label class="switch">
@@ -164,15 +174,17 @@ function renderGroups(groups) {
             </div>
         </div>
         <div class="group-details">
-            <p><strong>Username:</strong> ${group.username || "N/A"}</p>
-            <p><strong>Level:</strong> ${group.permission_type}</p>
-            <p><strong>Added:</strong> ${formatDate(group.created_at)}</p>
+            <p><strong>Username:</strong> <span class="text-secondary">${group.username || "N/A"}</span></p>
+            <div class="mb-3">
+              <span class="badge badge-${group.permission_type}">${group.permission_type.replace("_", " ")}</span>
+            </div>
+            <p class="text-sm text-muted">Added: ${formatDate(group.created_at)}</p>
             <div class="group-stats-strip mt-2">
-                <span>💬 ${group.total_messages || 0}</span>
-                <span>✅ ${group.success_count || 0}</span>
+                <span title="Total Messages Sent">💬 ${group.total_messages || 0}</span>
+                <span title="Successful Messages">✅ ${group.success_count || 0}</span>
             </div>
         </div>
-        <div class="group-actions">
+        <div class="group-actions mt-auto pt-4">
             <select class="form-control form-control-sm" onchange="updatePermission(${group.id}, this.value)">
                 <option value="all" ${group.permission_type === "all" ? "selected" : ""}>All Content</option>
                 <option value="text_only" ${group.permission_type === "text_only" ? "selected" : ""}>Text Only</option>
@@ -180,11 +192,11 @@ function renderGroups(groups) {
                 <option value="text_image" ${group.permission_type === "text_image" ? "selected" : ""}>Text + Image</option>
                 <option value="text_link_image" ${group.permission_type === "text_link_image" ? "selected" : ""}>Text + Link + Image</option>
             </select>
-            <button class="btn btn-outline-danger btn-sm" onclick="deleteGroup(${group.id})">Delete</button>
+            <button class="btn btn-outline-danger btn-sm" onclick="deleteGroup(${group.id})">🗑️ Remove</button>
         </div>
     </div>
-  `,
-    )
+  `;
+    })
     .join("");
 
   const checkboxes = document.querySelectorAll(".group-checkbox");
@@ -267,20 +279,30 @@ async function updateAnalytics() {
 }
 
 function renderAnalytics(data) {
+  const overview = data.overview || {};
   const totalSpan = document.getElementById("analyticsTotalMessages");
   const rateSpan = document.getElementById("analyticsSuccessRate");
   const failedSpan = document.getElementById("analyticsFailed");
-  if (totalSpan) totalSpan.textContent = data.total_messages;
+
+  if (totalSpan)
+    totalSpan.textContent =
+      (overview.total_messages_sent || 0) +
+      (overview.total_messages_failed || 0);
   if (rateSpan)
-    rateSpan.textContent = `${Math.round(data.success_rate * 100)}%`;
-  if (failedSpan) failedSpan.textContent = data.failed_messages;
-  renderRankedList("topGroupsList", data.top_performing, "success_rate", "%");
-  renderRankedList("problemGroupsList", data.need_attention, "failed_count");
+    rateSpan.textContent = `${Math.round(overview.overall_success_rate || 0)}%`;
+  if (failedSpan) failedSpan.textContent = overview.total_messages_failed || 0;
+
+  renderRankedList("topGroupsList", data.top_groups || [], "success_rate", "%");
+  renderRankedList(
+    "problemGroupsList",
+    data.problem_groups || [],
+    "total_attempts",
+  );
   renderRankedList(
     "inactiveGroupsList",
-    data.inactive_groups,
-    "days_inactive",
-    "d",
+    data.inactive_groups || [],
+    "last_message_at",
+    "date",
   );
 }
 
@@ -294,8 +316,11 @@ function renderRankedList(id, items, valueKey, unit = "") {
   container.innerHTML = items
     .map((item) => {
       let val = item[valueKey];
-      if (unit === "%") val = Math.round(val * 100);
-      return `<div class="ranked-item"><span class="ranked-title">${item.title}</span><span class="ranked-value">${val}${unit}</span></div>`;
+      if (unit === "%") val = Math.round(val);
+      else if (unit === "date") {
+        val = val ? new Date(val).toLocaleDateString() : "Never";
+      }
+      return `<div class="ranked-item"><span class="ranked-title">${item.title}</span><span class="ranked-value">${val}${unit !== "date" ? unit : ""}</span></div>`;
     })
     .join("");
 }
