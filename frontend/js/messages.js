@@ -39,6 +39,27 @@ export function setupMessages() {
   if (refreshScheduledBtn)
     refreshScheduledBtn.addEventListener("click", loadScheduledJobs);
 
+  // Setup list delegation
+  const scheduledList = document.getElementById("scheduledList");
+  if (scheduledList) {
+    scheduledList.addEventListener("click", (e) => {
+      const btn = e.target.closest(".cancel-job-btn");
+      if (btn) {
+        cancelJob(parseInt(btn.dataset.id));
+      }
+    });
+  }
+
+  const historyList = document.getElementById("historyList");
+  if (historyList) {
+    historyList.addEventListener("click", (e) => {
+      const btn = e.target.closest(".retry-message-btn");
+      if (btn) {
+        retryMessage(parseInt(btn.dataset.id));
+      }
+    });
+  }
+
   // Setup History Listeners
   setupHistoryListeners();
 
@@ -164,27 +185,54 @@ function renderScheduledJobs(jobs) {
     return;
   }
 
-  list.innerHTML = jobs
-    .map(
-      (job) => `
-    <div class="scheduled-card">
-        <div class="scheduled-info">
-            <p class="message-preview">${job.text.substring(0, 100)}${job.text.length > 100 ? "..." : ""}</p>
-            <div class="scheduled-meta">
-                <span>📅 ${formatDate(job.scheduled_at)}</span>
-                <span>🎯 ${job.is_bulk ? "Bulk: " + job.permission_type : job.group_count + " groups"}</span>
-            </div>
-        </div>
-        <div class="scheduled-actions">
-            <button class="btn btn-outline-danger btn-sm" onclick="cancelJob(${job.id})">Cancel</button>
-        </div>
-    </div>
-  `,
-    )
-    .join("");
+  // Clear list safely
+  list.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+
+  jobs.forEach((job) => {
+    const card = document.createElement("div");
+    card.className = "scheduled-card";
+
+    // Create text preview safely
+    const previewText =
+      job.text.substring(0, 100) + (job.text.length > 100 ? "..." : "");
+    const infoDiv = document.createElement("div");
+    infoDiv.className = "scheduled-info";
+
+    const p = document.createElement("p");
+    p.className = "message-preview";
+    p.textContent = previewText;
+
+    const meta = document.createElement("div");
+    meta.className = "scheduled-meta";
+    meta.innerHTML = `
+        <span>📅 ${formatDate(job.scheduled_at)}</span>
+        <span>🎯 ${job.is_bulk ? "Bulk: " + job.permission_type : job.group_count + " groups"}</span>
+    `;
+
+    infoDiv.appendChild(p);
+    infoDiv.appendChild(meta);
+
+    // Actions
+    const actionsDiv = document.createElement("div");
+    actionsDiv.className = "scheduled-actions";
+
+    const btn = document.createElement("button");
+    btn.className = "btn btn-outline-danger btn-sm cancel-job-btn";
+    btn.dataset.id = job.id;
+    btn.textContent = "Cancel";
+
+    actionsDiv.appendChild(btn);
+
+    card.appendChild(infoDiv);
+    card.appendChild(actionsDiv);
+    fragment.appendChild(card);
+  });
+
+  list.appendChild(fragment);
 }
 
-window.cancelJob = async (id) => {
+const cancelJob = async (id) => {
   if (!confirm("Are you sure you want to cancel this scheduled message?"))
     return;
   try {
@@ -226,35 +274,69 @@ function renderHistory() {
     return;
   }
 
-  list.innerHTML = filteredHistory
-    .map(
-      (msg) => `
-    <div class="history-item ${msg.status.toLowerCase()}">
-        <div class="history-main">
-            <p class="history-text" title="${msg.text || "(Media Message)"}">
-              ${msg.text ? msg.text.substring(0, 150) + (msg.text.length > 150 ? "..." : "") : "(Media Message)"}
-            </p>
-            <div class="history-meta">
-                <span>📅 ${formatDate(msg.created_at)}</span>
-                <span>•</span>
-                <span>👥 ${msg.group_count || 1} groups</span>
-                ${msg.link ? "<span>•</span><span>🔗 Has link</span>" : ""}
-                ${msg.media_id ? "<span>•</span><span>🖼️ Has media</span>" : ""}
-            </div>
-        </div>
-        <div class="history-status">
-            <span class="status-badge ${msg.status.toLowerCase()}">${msg.status}</span>
-            ${
-              msg.status.toLowerCase() === "failed"
-                ? `<button class="btn btn-outline-primary btn-sm mt-1" onclick="retryMessage(${msg.id})">🔄 Retry</button>`
-                : ""
-            }
-            ${msg.error_message ? `<p class="error-text">${msg.error_message}</p>` : ""}
-        </div>
-    </div>
-  `,
-    )
-    .join("");
+  list.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+
+  filteredHistory.forEach((msg) => {
+    const item = document.createElement("div");
+    item.className = `history-item ${msg.status.toLowerCase()}`;
+
+    const mainDiv = document.createElement("div");
+    mainDiv.className = "history-main";
+
+    const textP = document.createElement("p");
+    textP.className = "history-text";
+    textP.title = msg.text || "(Media Message)";
+    textP.textContent = msg.text
+      ? msg.text.substring(0, 150) + (msg.text.length > 150 ? "..." : "")
+      : "(Media Message)";
+
+    const metaDiv = document.createElement("div");
+    metaDiv.className = "history-meta";
+
+    let metaHtml = `<span>📅 ${formatDate(msg.created_at)}</span>
+    <span>•</span>
+    <span>👥 ${msg.group_count || 1} groups</span>`;
+
+    if (msg.link) metaHtml += "<span>•</span><span>🔗 Has link</span>";
+    if (msg.media_id) metaHtml += "<span>•</span><span>🖼️ Has media</span>";
+
+    metaDiv.innerHTML = metaHtml;
+
+    mainDiv.appendChild(textP);
+    mainDiv.appendChild(metaDiv);
+
+    const statusDiv = document.createElement("div");
+    statusDiv.className = "history-status";
+
+    const badge = document.createElement("span");
+    badge.className = `status-badge ${msg.status.toLowerCase()}`;
+    badge.textContent = msg.status;
+
+    statusDiv.appendChild(badge);
+
+    if (msg.status.toLowerCase() === "failed") {
+      const retryBtn = document.createElement("button");
+      retryBtn.className =
+        "btn btn-outline-primary btn-sm mt-1 retry-message-btn";
+      retryBtn.dataset.id = msg.id;
+      retryBtn.innerHTML = "🔄 Retry";
+      statusDiv.appendChild(retryBtn);
+    }
+
+    if (msg.error_message) {
+      const errP = document.createElement("p");
+      errP.className = "error-text";
+      errP.textContent = msg.error_message;
+      statusDiv.appendChild(errP);
+    }
+
+    item.appendChild(mainDiv);
+    item.appendChild(statusDiv);
+    fragment.appendChild(item);
+  });
+
+  list.appendChild(fragment);
 }
 
 function filterHistory() {
@@ -323,7 +405,7 @@ function exportToCSV() {
   showToast("History exported successfully", "success");
 }
 
-window.retryMessage = async (messageId) => {
+const retryMessage = async (messageId) => {
   const confirmed = await confirmAction(
     "Retry sending this message to groups?",
     { title: "Retry Message", confirmText: "Retry" },

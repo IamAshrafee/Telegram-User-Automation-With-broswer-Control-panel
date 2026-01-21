@@ -11,6 +11,7 @@ export function setupGroups() {
   const permissionFilter = document.getElementById("permissionFilter");
   const activeOnlyFilter = document.getElementById("activeOnlyFilter");
   const selectAllGroups = document.getElementById("selectAllGroups");
+  const groupsList = document.getElementById("groupsList");
 
   if (syncGroupsBtn) {
     syncGroupsBtn.addEventListener("click", async () => {
@@ -89,6 +90,41 @@ export function setupGroups() {
   const refreshAnalyticsBtn = document.getElementById("refreshAnalyticsBtn");
   if (refreshAnalyticsBtn)
     refreshAnalyticsBtn.addEventListener("click", updateAnalytics);
+
+  // --- Event Delegation for Groups List ---
+  if (groupsList) {
+    groupsList.addEventListener("change", (e) => {
+      const target = e.target;
+      // Toggle Group Status
+      if (target.matches(".group-toggle-input")) {
+        const id = parseInt(target.dataset.id);
+        toggleGroup(id, target.checked);
+      }
+      // Update Permission
+      if (target.matches(".permission-select")) {
+        const id = parseInt(target.dataset.id);
+        updatePermission(id, target.value);
+      }
+      // Bulk Checkbox
+      if (target.matches(".group-checkbox")) {
+        updateSelectedCount();
+      }
+    });
+
+    groupsList.addEventListener("click", (e) => {
+      const target = e.target;
+      // Delete Group
+      if (target.closest(".delete-group-btn")) {
+        const btn = target.closest(".delete-group-btn");
+        const id = parseInt(btn.dataset.id);
+        deleteGroup(id);
+      }
+      // Stop propagation for checkboxes to prevent card click issues if implemented later
+      if (target.matches(".group-checkbox")) {
+        e.stopPropagation();
+      }
+    });
+  }
 }
 
 export async function loadGroups() {
@@ -141,40 +177,57 @@ function renderGroups(groups) {
   else if (sort === "created_at-asc")
     filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
+  groupsList.innerHTML = ""; // Clear list safely
+
   if (filtered.length === 0) {
     groupsList.innerHTML =
       '<div class="empty-state"><p>No groups found.</p></div>';
     return;
   }
 
-  groupsList.innerHTML = filtered
-    .map((group, index) => {
-      const escapedSearch = searchTerm
-        ? searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-        : "";
-      const titleHtml = escapedSearch
-        ? group.title.replace(
-            new RegExp(`(${escapedSearch})`, "gi"),
-            '<span class="highlight">$1</span>',
-          )
-        : group.title;
+  // Create document fragment for better performance
+  const fragment = document.createDocumentFragment();
 
-      return `
-    <div class="group-card ${group.is_active ? "active" : ""}" style="animation-delay: ${index * 0.05}s">
+  filtered.forEach((group, index) => {
+    // Escape search term for regex safely
+    const card = document.createElement("div");
+    card.className = `group-card ${group.is_active ? "active" : ""}`;
+    card.style.animationDelay = `${index * 0.05}s`;
+
+    // Highlight logic using text nodes to prevent injection
+    const titleContainer = document.createElement("h3");
+    titleContainer.className = "ml-2";
+
+    if (searchTerm) {
+      const parts = group.title.split(new RegExp(`(${searchTerm})`, "gi"));
+      parts.forEach((part) => {
+        if (part.toLowerCase() === searchTerm) {
+          const highlight = document.createElement("span");
+          highlight.className = "highlight";
+          highlight.textContent = part;
+          titleContainer.appendChild(highlight);
+        } else {
+          titleContainer.appendChild(document.createTextNode(part));
+        }
+      });
+    } else {
+      titleContainer.textContent = group.title;
+    }
+
+    card.innerHTML = `
         <div class="group-header">
             <div class="d-flex align-items-center">
-                <input type="checkbox" class="group-checkbox" data-id="${group.id}" onclick="event.stopPropagation()">
-                <h3 class="ml-2">${titleHtml}</h3>
+                <input type="checkbox" class="group-checkbox" data-id="${group.id}">
             </div>
             <div class="group-status">
                 <label class="switch">
-                    <input type="checkbox" ${group.is_active ? "checked" : ""} onchange="toggleGroup(${group.id}, this.checked)">
+                    <input type="checkbox" class="group-toggle-input" data-id="${group.id}" ${group.is_active ? "checked" : ""}>
                     <span class="slider round"></span>
                 </label>
             </div>
         </div>
         <div class="group-details">
-            <p><strong>Username:</strong> <span class="text-secondary">${group.username || "N/A"}</span></p>
+            <p><strong>Username:</strong> <span class="text-secondary group-username"></span></p>
             <div class="mb-3">
               <span class="badge badge-${group.permission_type}">${group.permission_type.replace("_", " ")}</span>
             </div>
@@ -185,24 +238,26 @@ function renderGroups(groups) {
             </div>
         </div>
         <div class="group-actions mt-auto pt-4">
-            <select class="form-control form-control-sm" onchange="updatePermission(${group.id}, this.value)">
+            <select class="form-control form-control-sm permission-select" data-id="${group.id}">
                 <option value="all" ${group.permission_type === "all" ? "selected" : ""}>All Content</option>
                 <option value="text_only" ${group.permission_type === "text_only" ? "selected" : ""}>Text Only</option>
                 <option value="text_link" ${group.permission_type === "text_link" ? "selected" : ""}>Text + Link</option>
                 <option value="text_image" ${group.permission_type === "text_image" ? "selected" : ""}>Text + Image</option>
                 <option value="text_link_image" ${group.permission_type === "text_link_image" ? "selected" : ""}>Text + Link + Image</option>
             </select>
-            <button class="btn btn-outline-danger btn-sm" onclick="deleteGroup(${group.id})">🗑️ Remove</button>
+            <button class="btn btn-outline-danger btn-sm delete-group-btn" data-id="${group.id}">🗑️ Remove</button>
         </div>
-    </div>
-  `;
-    })
-    .join("");
+    `;
 
-  const checkboxes = document.querySelectorAll(".group-checkbox");
-  checkboxes.forEach((cb) =>
-    cb.addEventListener("change", updateSelectedCount),
-  );
+    // Inject the safe title and username
+    card.querySelector(".group-header .d-flex").appendChild(titleContainer);
+
+    card.querySelector(".group-username").textContent = group.username || "N/A";
+
+    fragment.appendChild(card);
+  });
+
+  groupsList.appendChild(fragment);
 }
 
 function updateSelectedCount() {
@@ -240,7 +295,8 @@ async function handleBulkAction(action, value = null) {
   }
 }
 
-window.toggleGroup = async (id, isActive) => {
+// Internal functions (no longer attached to window)
+const toggleGroup = async (id, isActive) => {
   try {
     await api.patch(`/groups/${id}`, { is_active: isActive });
   } catch (error) {
@@ -249,7 +305,7 @@ window.toggleGroup = async (id, isActive) => {
   }
 };
 
-window.updatePermission = async (id, type) => {
+const updatePermission = async (id, type) => {
   try {
     await api.patch(`/groups/${id}`, { permission_type: type });
     showToast("Permission updated", "success");
@@ -258,7 +314,7 @@ window.updatePermission = async (id, type) => {
   }
 };
 
-window.deleteGroup = async (id) => {
+const deleteGroup = async (id) => {
   if (!confirm("Are you sure you want to remove this group?")) return;
   try {
     await api.delete(`/groups/${id}`);
@@ -313,16 +369,34 @@ function renderRankedList(id, items, valueKey, unit = "") {
     container.innerHTML = '<p class="text-sm text-muted">No data available</p>';
     return;
   }
-  container.innerHTML = items
-    .map((item) => {
-      let val = item[valueKey];
-      if (unit === "%") val = Math.round(val);
-      else if (unit === "date") {
-        val = val ? new Date(val).toLocaleDateString() : "Never";
-      }
-      return `<div class="ranked-item"><span class="ranked-title">${item.title}</span><span class="ranked-value">${val}${unit !== "date" ? unit : ""}</span></div>`;
-    })
-    .join("");
+
+  container.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+
+  items.forEach((item) => {
+    const div = document.createElement("div");
+    div.className = "ranked-item";
+
+    let val = item[valueKey];
+    if (unit === "%") val = Math.round(val);
+    else if (unit === "date") {
+      val = val ? new Date(val).toLocaleDateString() : "Never";
+    }
+
+    const titleSpan = document.createElement("span");
+    titleSpan.className = "ranked-title";
+    titleSpan.textContent = item.title;
+
+    const valueSpan = document.createElement("span");
+    valueSpan.className = "ranked-value";
+    valueSpan.textContent = `${val}${unit !== "date" ? unit : ""}`;
+
+    div.appendChild(titleSpan);
+    div.appendChild(valueSpan);
+    fragment.appendChild(div);
+  });
+
+  container.appendChild(fragment);
 }
 
 export function renderGroupSelectors() {
@@ -332,16 +406,30 @@ export function renderGroupSelectors() {
     selector.innerHTML = '<p class="text-muted">No groups available</p>';
     return;
   }
-  selector.innerHTML = allGroups
+
+  selector.innerHTML = "";
+
+  allGroups
     .filter((g) => g.is_active)
-    .map(
-      (group) => `
-    <label class="group-select-item">
-        <input type="checkbox" name="target_groups" value="${group.id}">
-        <span>${group.title}</span>
-        <small>${group.permission_type}</small>
-    </label>
-  `,
-    )
-    .join("");
+    .forEach((group) => {
+      const label = document.createElement("label");
+      label.className = "group-select-item";
+
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.name = "target_groups";
+      input.value = group.id;
+
+      const spanTitle = document.createElement("span");
+      spanTitle.textContent = group.title;
+
+      const smallPerm = document.createElement("small");
+      smallPerm.textContent = group.permission_type;
+
+      label.appendChild(input);
+      label.appendChild(spanTitle);
+      label.appendChild(smallPerm);
+
+      selector.appendChild(label);
+    });
 }

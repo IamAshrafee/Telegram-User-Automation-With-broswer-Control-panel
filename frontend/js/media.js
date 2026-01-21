@@ -41,6 +41,17 @@ export function setupMedia() {
     });
   }
 
+  // Gallery delegation
+  const mediaGallery = document.getElementById("mediaGallery");
+  if (mediaGallery) {
+    mediaGallery.addEventListener("click", (e) => {
+      const btn = e.target.closest(".delete-media-btn");
+      if (btn) {
+        deleteMedia(parseInt(btn.dataset.id));
+      }
+    });
+  }
+
   setupDuplicateModal();
 }
 
@@ -142,14 +153,20 @@ function renderMedia(media) {
     return;
   }
 
-  gallery.innerHTML = media
-    .map(
-      (item) => `
-    <div class="media-card" data-id="${item.id}" style="animation-delay: ${Math.random() * 0.2}s">
+  gallery.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+
+  media.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "media-card";
+    card.dataset.id = item.id;
+    card.style.animationDelay = `${Math.random() * 0.2}s`;
+
+    card.innerHTML = `
         <div class="media-card-img-wrapper">
             <img src="${API_BASE}${item.url}" alt="${item.filename}" loading="lazy">
             <div class="media-card-overlay">
-                <button class="btn btn-danger btn-sm shadow-lg" onclick="deleteMedia(${item.id})">
+                <button class="btn btn-danger btn-sm shadow-lg delete-media-btn" data-id="${item.id}">
                   🗑️ Delete
                 </button>
             </div>
@@ -158,10 +175,11 @@ function renderMedia(media) {
             <div class="media-name" title="${item.filename}">${item.filename}</div>
             <div class="media-meta">${formatFileSize(item.file_size)} • ${item.mime_type.split("/")[1].toUpperCase()}</div>
         </div>
-    </div>
-  `,
-    )
-    .join("");
+    `;
+    fragment.appendChild(card);
+  });
+
+  gallery.appendChild(fragment);
 }
 
 function updateDashboardStats(count) {
@@ -171,7 +189,7 @@ function updateDashboardStats(count) {
   if (totalMediaCount) totalMediaCount.textContent = count;
 }
 
-window.deleteMedia = async (id) => {
+const deleteMedia = async (id) => {
   if (!confirm("Are you sure you want to delete this media?")) return;
   try {
     await api.delete(`/media/${id}`);
