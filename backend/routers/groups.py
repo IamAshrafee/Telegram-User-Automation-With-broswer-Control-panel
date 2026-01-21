@@ -12,6 +12,13 @@ from datetime import datetime, timedelta
 router = APIRouter(prefix="/groups", tags=["Groups"])
 
 
+@router.get("/all", response_model=List[GroupResponse])
+async def list_all_active_groups(db: Session = Depends(get_db)):
+    """List all active groups for selection dropdowns (lightweight)."""
+    groups = db.query(Group).filter(Group.is_active == True).order_by(Group.title).all()
+    return groups
+
+
 @router.get("/", response_model=GroupPaginatedResponse)
 async def list_groups(
     q: Optional[str] = Query(None, description="Search query for group title"),

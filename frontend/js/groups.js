@@ -509,26 +509,22 @@ function renderRankedList(id, items, valueKey, unit = "") {
   container.appendChild(fragment);
 }
 
-export function renderGroupSelectors() {
+export async function renderGroupSelectors() {
   const selector = document.getElementById("groupSelector");
   if (!selector) return;
 
-  // Note: This relies on allGroups having content.
-  // With pagination, this might only show current page's groups.
-  // For a robust implementation, we might need a separate API endpoint
-  // to search/select group by name for the composer.
-  // For now, we utilize what we have loaded.
+  try {
+    // Fetch all active groups specifically for the selector
+    const activeGroups = await api.get("/groups/all");
 
-  if (allGroups.length === 0) {
-    selector.innerHTML = '<p class="text-muted">No groups loaded.</p>';
-    return;
-  }
+    if (activeGroups.length === 0) {
+      selector.innerHTML = '<p class="text-muted">No active groups found.</p>';
+      return;
+    }
 
-  selector.innerHTML = "";
+    selector.innerHTML = "";
 
-  allGroups
-    .filter((g) => g.is_active)
-    .forEach((group) => {
+    activeGroups.forEach((group) => {
       const label = document.createElement("label");
       label.className = "group-select-item";
 
@@ -549,4 +545,8 @@ export function renderGroupSelectors() {
 
       selector.appendChild(label);
     });
+  } catch (error) {
+    console.error("Failed to load group selectors:", error);
+    selector.innerHTML = '<p class="text-danger">Failed to load groups.</p>';
+  }
 }
