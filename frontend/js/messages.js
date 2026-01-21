@@ -96,7 +96,7 @@ async function handleSendMessage() {
         ? "/messages/schedule/bulk"
         : "/messages/send/bulk";
     } else {
-      payload.group_ids = selectedGroups;
+      payload.target_groups = selectedGroups;
       endpoint = isScheduled ? "/messages/schedule" : "/messages/send";
     }
 
@@ -333,7 +333,7 @@ window.retryMessage = async (messageId) => {
       text: message.text,
       link: message.link,
       media_id: message.media_id,
-      group_ids: message.target_groups || [],
+      target_groups: message.target_groups || [],
     });
 
     showToast("Retry started!", "success");

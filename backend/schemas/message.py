@@ -13,6 +13,15 @@ class MessageCreate(BaseModel):
     scheduled_at: Optional[datetime] = None
 
 
+class BulkMessageCreate(BaseModel):
+    """Schema for bulk sending to groups by permission."""
+    text: str = Field(..., min_length=1, description="Message text content")
+    link: Optional[str] = None
+    media_id: Optional[int] = None
+    permission_type: str = Field(..., description="Target permission type (all, text_only, etc)")
+    scheduled_at: Optional[datetime] = None
+
+
 class MessageUpdate(BaseModel):
     """Schema for updating a scheduled message."""
     text: Optional[str] = None

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from backend.database import get_db
-from backend.schemas import MessageCreate, MessageResponse, MessageSendResponse, MessageUpdate
-from backend.models import Message, MessageStatus
+from backend.schemas import MessageCreate, BulkMessageCreate, MessageResponse, MessageSendResponse, MessageUpdate
+from backend.models import Message, MessageStatus, Group
 from backend.services import message_service, telegram_service, settings_service
 from backend.utils.logger import setup_logger
 from typing import List
@@ -53,6 +53,117 @@ async def send_message(
         failed_count=0,
         skipped_count=0
     )
+
+
+@router.post("/send/bulk", response_model=MessageSendResponse)
+async def send_message_bulk(
+    message_data: BulkMessageCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """Send message to all active groups with matching permission type."""
+    # Ensure Telegram client is connected
+    is_loaded = await telegram_service.load_session_from_db(db)
+    if not is_loaded:
+        raise HTTPException(status_code=401, detail="Not authenticated with Telegram")
+    
+    # Resolve target groups
+    query = db.query(Group.id).filter(Group.is_active == True)
+    if message_data.permission_type != "all":
+        query = query.filter(Group.permission_type == message_data.permission_type)
+    
+    target_groups = [g[0] for g in query.all()]
+    
+    if not target_groups:
+        raise HTTPException(status_code=400, detail=f"No active groups found for permission type: {message_data.permission_type}")
+    
+    # Create message record
+    message = Message(
+        text=message_data.text,
+        link=message_data.link,
+        media_id=message_data.media_id,
+        target_groups=target_groups,
+        status=MessageStatus.DRAFT
+    )
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    
+    # Send message in background
+    background_tasks.add_task(message_service.send_message_bg, message.id)
+    
+    return MessageSendResponse(
+        success=True,
+        message=f"Bulk send started to {len(target_groups)} groups",
+        message_id=message.id,
+        sent_count=0,
+        failed_count=0,
+        skipped_count=0
+    )
+
+
+@router.post("/schedule/bulk", response_model=MessageResponse)
+async def schedule_message_bulk(
+    message_data: BulkMessageCreate,
+    db: Session = Depends(get_db)
+):
+    """Schedule a bulk message for future delivery."""
+    # Ensure Telegram client is connected
+    is_loaded = await telegram_service.load_session_from_db(db)
+    if not is_loaded:
+        raise HTTPException(status_code=401, detail="Not authenticated with Telegram")
+    
+    if not message_data.scheduled_at:
+        raise HTTPException(status_code=400, detail="scheduled_at is required")
+    
+    # Resolve target groups
+    query = db.query(Group.id).filter(Group.is_active == True)
+    if message_data.permission_type != "all":
+        query = query.filter(Group.permission_type == message_data.permission_type)
+    
+    target_groups = [g[0] for g in query.all()]
+    
+    if not target_groups:
+        raise HTTPException(status_code=400, detail=f"No active groups found for permission type: {message_data.permission_type}")
+
+    # Handle Timezone (similar to selective schedule)
+    user_timezone = settings_service.get_setting("timezone", "UTC")
+    try:
+        tz = ZoneInfo(user_timezone)
+    except Exception:
+        tz = timezone.utc
+
+    scheduled_at = message_data.scheduled_at
+    if scheduled_at.tzinfo is None:
+        scheduled_at = scheduled_at.replace(tzinfo=tz)
+    else:
+        scheduled_at = scheduled_at.astimezone(tz)
+
+    scheduled_at_utc = scheduled_at.astimezone(timezone.utc)
+    
+    if scheduled_at_utc <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="scheduled_at must be in the future")
+    
+    # Create message record
+    message = Message(
+        text=message_data.text,
+        link=message_data.link,
+        media_id=message_data.media_id,
+        target_groups=target_groups,
+        status=MessageStatus.SCHEDULED,
+        scheduled_at=scheduled_at_utc
+    )
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    
+    # Schedule the message
+    message_service.schedule_message(message.id, scheduled_at_utc)
+    
+    if message.scheduled_at and message.scheduled_at.tzinfo is None:
+        message.scheduled_at = message.scheduled_at.replace(tzinfo=timezone.utc)
+        
+    return message
 
 
 @router.get("/active", response_model=List[MessageResponse])

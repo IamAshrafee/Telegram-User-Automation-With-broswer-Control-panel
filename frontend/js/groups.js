@@ -208,15 +208,17 @@ async function handleBulkAction(action, value = null) {
   if (selectedIds.length === 0) return;
 
   try {
-    const data = { group_ids: selectedIds };
-    if (action === "permission") data.permission_type = value;
+    const payload = {
+      group_ids: selectedIds,
+      update_data: {},
+    };
 
-    let endpoint = "";
-    if (action === "activate") endpoint = "/groups/bulk-status/active";
-    else if (action === "deactivate") endpoint = "/groups/bulk-status/inactive";
-    else if (action === "permission") endpoint = "/groups/bulk-permission";
+    if (action === "activate") payload.update_data.is_active = true;
+    else if (action === "deactivate") payload.update_data.is_active = false;
+    else if (action === "permission")
+      payload.update_data.permission_type = value;
 
-    await api.post(endpoint, data);
+    await api.post("/groups/bulk-update", payload);
     showToast(`Bulk ${action} successful!`, "success");
     await loadGroups();
     const selectAll = document.getElementById("selectAllGroups");
