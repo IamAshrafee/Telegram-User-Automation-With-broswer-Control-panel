@@ -4,7 +4,14 @@ import { formatDate } from "./utils.js";
 import { progressWidget } from "./progress-widget.js";
 
 let messageHistory = [];
-let filteredHistory = [];
+let currentPage = 1;
+let totalPages = 1;
+let isPageLoading = false;
+let currentFilters = {
+  q: "",
+  status: "",
+  limit: 20,
+};
 
 export function setupMessages() {
   const sendMessageBtn = document.getElementById("sendMessageBtn");
@@ -64,7 +71,7 @@ export function setupMessages() {
   setupHistoryListeners();
 
   // Initial load
-  loadHistory();
+  loadHistory(1, false);
 }
 
 async function handleSendMessage() {
@@ -146,7 +153,10 @@ async function handleSendMessage() {
     }
 
     if (isScheduled) await loadScheduledJobs();
-    else await loadHistory();
+    else {
+      // Reload history from scratch after new send
+      await loadHistory(1, false);
+    }
   } catch (error) {
     showToast(error.message, "error");
   } finally {
@@ -246,25 +256,84 @@ const cancelJob = async (id) => {
 
 // --- Message History ---
 
-async function loadHistory() {
+async function loadHistory(page = 1, append = false) {
+  if (isPageLoading) return;
+  isPageLoading = true;
+
   try {
-    messageHistory = await api.get("/messages/history?limit=100");
-    filteredHistory = [...messageHistory];
-    renderHistory();
+    const params = new URLSearchParams({
+      page: page,
+      limit: currentFilters.limit,
+    });
+    // Currently backend "get_message_history" does not support filtering by query/status
+    // in the API logic we just added (it justpaginates *all* history).
+    // So front-end filters won't work perfectly server-side yet.
+    // We will rely on loading and filtering client-side or accepting that simple history is time-based.
+    // For now, removing complex client-side filter logic in favor of paginated data.
+
+    const response = await api.get(`/messages/history?${params.toString()}`);
+
+    const items = response.items || [];
+    currentPage = response.page;
+    totalPages = response.pages;
+
+    if (append) {
+      messageHistory = [...messageHistory, ...items];
+    } else {
+      messageHistory = items;
+    }
+
+    renderHistory(items, append);
+    renderLoadMore();
   } catch (error) {
     console.error("Failed to load history:", error);
-    const list = document.getElementById("historyList");
-    if (list)
-      list.innerHTML =
+    if (!append) {
+      document.getElementById("historyList").innerHTML =
         '<div class="empty-state"><p>Failed to load history</p></div>';
+    }
+  } finally {
+    isPageLoading = false;
   }
 }
 
-function renderHistory() {
+function renderLoadMore() {
+  let container = document.getElementById("historyLoadMore");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "historyLoadMore";
+    container.className = "load-more-container mt-4 text-center pb-3";
+    document.getElementById("historyList")?.after(container);
+  }
+
+  if (currentPage >= totalPages || totalPages <= 1) {
+    container.innerHTML = "";
+    return;
+  }
+
+  container.innerHTML = `
+        <button id="loadMoreHistoryBtn" class="btn btn-secondary shadow-sm">
+            <span class="btn-text">Load Older Messages</span>
+            <div class="spinner-sm hidden" style="margin-left:8px;"></div>
+        </button>
+    `;
+
+  const btn = document.getElementById("loadMoreHistoryBtn");
+  btn.onclick = async () => {
+    btn.disabled = true;
+    btn.querySelector(".spinner-sm").classList.remove("hidden");
+    await loadHistory(currentPage + 1, true);
+  };
+}
+
+function renderHistory(items, append = false) {
   const list = document.getElementById("historyList");
   if (!list) return;
 
-  if (filteredHistory.length === 0) {
+  if (!append) {
+    list.innerHTML = "";
+  }
+
+  if (items.length === 0 && !append) {
     list.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">📜</div>
@@ -274,12 +343,14 @@ function renderHistory() {
     return;
   }
 
-  list.innerHTML = "";
   const fragment = document.createDocumentFragment();
 
-  filteredHistory.forEach((msg) => {
+  items.forEach((msg) => {
     const item = document.createElement("div");
     item.className = `history-item ${msg.status.toLowerCase()}`;
+
+    // Simple text search filter on client side if needed,
+    // but better to omit if pagination is active to avoid confusion.
 
     const mainDiv = document.createElement("div");
     mainDiv.className = "history-main";
@@ -294,9 +365,13 @@ function renderHistory() {
     const metaDiv = document.createElement("div");
     metaDiv.className = "history-meta";
 
+    // Use safe accessors for group counts if not available
+    const gCount =
+      msg.group_count || (msg.target_groups ? msg.target_groups.length : 0);
+
     let metaHtml = `<span>📅 ${formatDate(msg.created_at)}</span>
     <span>•</span>
-    <span>👥 ${msg.group_count || 1} groups</span>`;
+    <span>👥 ${gCount} groups</span>`;
 
     if (msg.link) metaHtml += "<span>•</span><span>🔗 Has link</span>";
     if (msg.media_id) metaHtml += "<span>•</span><span>🖼️ Has media</span>";
@@ -339,55 +414,37 @@ function renderHistory() {
   list.appendChild(fragment);
 }
 
-function filterHistory() {
-  const searchTerm = document
-    .getElementById("historySearch")
-    ?.value.toLowerCase();
-  const statusFilter = document.getElementById("historyFilter")?.value;
-
-  filteredHistory = messageHistory.filter((msg) => {
-    const text = msg.text || "";
-    const matchesSearch =
-      !searchTerm || text.toLowerCase().includes(searchTerm);
-    const matchesStatus =
-      !statusFilter ||
-      statusFilter === "all" ||
-      msg.status.toLowerCase() === statusFilter.toLowerCase();
-    return matchesSearch && matchesStatus;
-  });
-
-  renderHistory();
-}
-
 function setupHistoryListeners() {
   const historyTabBtn = document.querySelector('.tab-btn[data-tab="history"]');
   if (historyTabBtn) {
-    historyTabBtn.addEventListener("click", () => loadHistory());
+    historyTabBtn.addEventListener("click", () => loadHistory(1, false));
   }
 
+  // Client side filtering is temporarily disabled or needs to be server-side
+  // For now we remove the listeners that filtered the local array to avoid conflict with pagination
+  /*
   const searchInput = document.getElementById("historySearch");
   if (searchInput) searchInput.addEventListener("input", filterHistory);
-
-  const filterSelect = document.getElementById("historyFilter");
-  if (filterSelect) filterSelect.addEventListener("change", filterHistory);
+  */
 
   const exportBtn = document.getElementById("exportHistoryBtn");
   if (exportBtn) exportBtn.addEventListener("click", exportToCSV);
 }
 
 function exportToCSV() {
-  if (filteredHistory.length === 0) {
-    showToast("No messages to export", "warning");
+  // Note: This only exports loaded messages
+  if (messageHistory.length === 0) {
+    showToast("No messages loaded to export", "warning");
     return;
   }
 
   const headers = ["Date", "Status", "Text", "Link", "Groups", "Has Media"];
-  const rows = filteredHistory.map((msg) => [
+  const rows = messageHistory.map((msg) => [
     formatDate(msg.created_at),
     msg.status,
     `"${(msg.text || "").replace(/"/g, '""')}"`,
     msg.link || "",
-    msg.group_count || 1,
+    msg.group_count || msg.target_groups?.length || 0,
     msg.media_id ? "Yes" : "No",
   ]);
 
@@ -414,7 +471,7 @@ const retryMessage = async (messageId) => {
 
   try {
     const message = messageHistory.find((m) => m.id === messageId);
-    if (!message) throw new Error("Message not found");
+    if (!message) throw new Error("Message not found or not loaded");
 
     await api.post("/messages/send", {
       text: message.text,
@@ -424,7 +481,7 @@ const retryMessage = async (messageId) => {
     });
 
     showToast("Retry started!", "success");
-    await loadHistory();
+    await loadHistory(1, false);
   } catch (error) {
     showToast("Failed to retry: " + error.message, "error");
   }

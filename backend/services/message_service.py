@@ -218,28 +218,52 @@ class MessageService:
         sent_count = 0
         failed_count = 0
         skipped_count = 0
+
+        # Performance Optimization: Calculate daily sent count ONCE
+        limit = settings_service.get_setting('daily_message_limit', 100)
+        today = datetime.now().date()
+        start_of_day = datetime.combine(today, datetime.min.time())
+        
+        # Count messages sent today from DB (excluding current job if it was part of a previous run)
+        # We need to approximate by counting 'sent' statuses in messages updated today.
+        messages_today = db.query(Message).filter(
+            Message.status.in_([MessageStatus.SENT, MessageStatus.SENDING]),
+            Message.updated_at >= start_of_day,
+            Message.id != message_id # Exclude current message from baseline
+        ).all()
+        
+        daily_sent_count = 0
+        for msg in messages_today:
+             if msg.group_status:
+                for info in msg.group_status.values():
+                    if info.get("status") == "sent":
+                        daily_sent_count += 1
         
         # Send to each target group
         for i, group_id in enumerate(message.target_groups):
-            # Check daily limit
-            if not self._check_daily_limit(db):
-                print(f"Daily limit reached ({settings_service.get_setting('daily_message_limit')})")
+            # Check daily limit using local counter
+            if (daily_sent_count + sent_count) >= limit:
+                print(f"Daily limit reached ({limit})")
                 
                 # Mark remaining as skipped
                 remaining = message.target_groups[i:]
                 current_status = dict(message.group_status) # Copy to mutate
                 
-                # Fetch group info for better reporting (bulk fetch would be better but simple iteration is fine for now)
+                # Fetch group info for better reporting
+                # (Optimized: we could pre-fetch all remaining names, but doing it on skip is acceptable edge case)
+                remaining_groups = db.query(Group.id, Group.title).filter(Group.id.in_(remaining)).all()
+                rem_map = {g.id: g.title for g in remaining_groups}
+                
+                timestamp = datetime.now().isoformat()
                 for rid in remaining:
-                    group_info = db.query(Group.title).filter(Group.id == rid).first()
-                    g_name = group_info[0] if group_info else "Unknown Group"
-                    
+                    g_name = rem_map.get(rid, "Unknown Group")
                     current_status[str(rid)] = {
                         "status": "skipped", 
                         "reason": "daily_limit",
                         "group_name": g_name,
-                        "updated_at": datetime.now().isoformat()
+                        "updated_at": timestamp
                     }
+                
                 message.group_status = current_status
                 message.processed_count = len(message.target_groups)
                 skipped_count += len(remaining)

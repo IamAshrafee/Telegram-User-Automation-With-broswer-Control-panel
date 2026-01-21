@@ -39,3 +39,13 @@ class GroupSyncResponse(BaseModel):
     message: str
     synced_count: int
     new_count: int
+
+
+class GroupPaginatedResponse(BaseModel):
+    """Response schema for paginated group list."""
+    items: list[GroupResponse]
+    total: int
+    page: int
+    pages: int
+    has_next: bool
+    has_prev: bool

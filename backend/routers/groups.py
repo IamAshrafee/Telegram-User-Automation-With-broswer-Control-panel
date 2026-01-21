@@ -1,48 +1,85 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func, desc, asc
 from backend.database import get_db
-from backend.schemas import GroupResponse, GroupUpdate, GroupSyncResponse
+from backend.schemas import GroupResponse, GroupUpdate, GroupSyncResponse, GroupPaginatedResponse
 from backend.services import telegram_service
 from backend.models import Group, PermissionType
 from typing import List, Optional
+import math
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/groups", tags=["Groups"])
 
 
-@router.get("/", response_model=List[GroupResponse])
+@router.get("/", response_model=GroupPaginatedResponse)
 async def list_groups(
+    q: Optional[str] = Query(None, description="Search query for group title"),
     permission_type: Optional[PermissionType] = None,
     is_active: Optional[bool] = None,
+    sort_by: str = Query("title", description="Field to sort by: title, created_at"),
+    sort_order: str = Query("asc", description="Sort order: asc or desc"),
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db)
 ):
-    """List all groups with optional filters."""
+    """List groups with pagination, filtering, and sorting."""
     query = db.query(Group)
     
+    # Search
+    if q:
+        query = query.filter(Group.title.ilike(f"%{q}%"))
+    
+    # Filters
     if permission_type:
         query = query.filter(Group.permission_type == permission_type)
     
     if is_active is not None:
         query = query.filter(Group.is_active == is_active)
     
-    groups = query.all()
-    return groups
+    # Sorting
+    sort_field = getattr(Group, sort_by, Group.title)
+    if sort_order == "desc":
+        query = query.order_by(desc(sort_field))
+    else:
+        query = query.order_by(asc(sort_field))
+    
+    # Pagination
+    total = query.count()
+    pages = math.ceil(total / limit)
+    offset = (page - 1) * limit
+    
+    items = query.offset(offset).limit(limit).all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "pages": pages,
+        "has_next": page < pages,
+        "has_prev": page > 1
+    }
 
 
 @router.post("/sync", response_model=GroupSyncResponse)
 async def sync_groups(db: Session = Depends(get_db)):
-    """Fetch groups from Telegram and update database."""
-    # Ensure client is connected
+    """
+    Fetch groups from Telegram and update database.
+    Marks groups not found in Telegram as inactive (user left).
+    """
     is_loaded = await telegram_service.load_session_from_db(db)
     if not is_loaded:
         raise HTTPException(status_code=401, detail="Not authenticated with Telegram")
     
-    # Fetch groups from Telegram
     telegram_groups = await telegram_service.get_dialogs()
     
     new_count = 0
     synced_count = len(telegram_groups)
+    active_telegram_ids = set()
     
     for tg_group in telegram_groups:
+        active_telegram_ids.add(tg_group["telegram_id"])
+        
         # Check if group already exists
         existing = db.query(Group).filter(
             Group.telegram_id == tg_group["telegram_id"]
@@ -50,17 +87,28 @@ async def sync_groups(db: Session = Depends(get_db)):
         
         if existing:
             # Update title if changed
-            existing.title = tg_group["title"]
+            if existing.title != tg_group["title"]:
+                existing.title = tg_group["title"]
+            # Reactivate if it was inactive
+            if not existing.is_active:
+                existing.is_active = True
         else:
             # Create new group
             new_group = Group(
                 telegram_id=tg_group["telegram_id"],
                 title=tg_group["title"],
-                permission_type=PermissionType.ALL,  # Default to all permissions
+                permission_type=PermissionType.ALL,
                 is_active=True
             )
             db.add(new_group)
             new_count += 1
+    
+    # Mark groups not in Telegram as inactive (stale)
+    if active_telegram_ids:
+        db.query(Group).filter(
+            Group.telegram_id.notin_(active_telegram_ids),
+            Group.is_active == True
+        ).update({Group.is_active: False}, synchronize_session=False)
     
     db.commit()
     
@@ -92,7 +140,6 @@ async def update_group(
     
     db.commit()
     db.refresh(group)
-    
     return group
 
 
@@ -102,117 +149,79 @@ async def bulk_update_groups(
     update_data: GroupUpdate,
     db: Session = Depends(get_db)
 ):
-    """
-    Update multiple groups at once.
-    Supports bulk permission changes and bulk activate/deactivate.
-    """
+    """Update multiple groups at once."""
     if not group_ids:
         raise HTTPException(status_code=400, detail="No group IDs provided")
     
-    updated_count = 0
+    query = db.query(Group).filter(Group.id.in_(group_ids))
+    update_values = {}
     
-    for group_id in group_ids:
-        group = db.query(Group).filter(Group.id == group_id).first()
-        if group:
-            if update_data.permission_type is not None:
-                group.permission_type = update_data.permission_type
-            if update_data.is_active is not None:
-                group.is_active = update_data.is_active
-            updated_count += 1
+    if update_data.permission_type is not None:
+        update_values[Group.permission_type] = update_data.permission_type
     
-    db.commit()
-    
+    if update_data.is_active is not None:
+        update_values[Group.is_active] = update_data.is_active
+        
+    if update_values:
+        query.update(update_values, synchronize_session=False)
+        db.commit()
+        
     return {
         "success": True,
-        "message": f"Updated {updated_count} groups",
-        "updated_count": updated_count
+        "message": f"Updated {len(group_ids)} groups",
+        "updated_count": len(group_ids)
     }
-
-
-@router.get("/search", response_model=List[GroupResponse])
-async def search_groups(
-    q: Optional[str] = Query(None, description="Search query for group title"),
-    permission_type: Optional[PermissionType] = None,
-    is_active: Optional[bool] = None,
-    sort_by: str = Query("title", description="Field to sort by: title, created_at, updated_at"),
-    sort_order: str = Query("asc", description="Sort order: asc or desc"),
-    db: Session = Depends(get_db)
-):
-    """
-    Advanced search and filtering for groups.
-    Supports search by title, filtering, and sorting.
-    """
-    from sqlalchemy import desc, asc
-    
-    query = db.query(Group)
-    
-    # Search by title
-    if q:
-        query = query.filter(Group.title.ilike(f"%{q}%"))
-    
-    # Filter by permission type
-    if permission_type:
-        query = query.filter(Group.permission_type == permission_type)
-    
-    # Filter by active status
-    if is_active is not None:
-        query = query.filter(Group.is_active == is_active)
-    
-    # Sorting
-    sort_field = getattr(Group, sort_by, Group.title)
-    if sort_order == "desc":
-        query = query.order_by(desc(sort_field))
-    else:
-        query = query.order_by(asc(sort_field))
-    
-    groups = query.all()
-    return groups
 
 
 @router.get("/analytics")
 async def get_group_analytics(db: Session = Depends(get_db)):
     """
-    Get analytics data for all groups.
-    Returns statistics like top performers, success rates, etc.
+    Get analytics data using optimized database aggregations.
     """
-    from sqlalchemy import func as sql_func
+    total_groups = db.query(func.count(Group.id)).scalar()
+    active_groups = db.query(func.count(Group.id)).filter(Group.is_active == True).scalar()
     
-    groups = db.query(Group).all()
+    # Aggregations for messages
+    stats = db.query(
+        func.sum(Group.messages_sent).label('sent'),
+        func.sum(Group.messages_failed).label('failed')
+    ).first()
     
-    # Calculate overall stats
-    total_messages = sum(g.messages_sent + g.messages_failed for g in groups)
-    total_sent = sum(g.messages_sent for g in groups)
-    total_failed = sum(g.messages_failed for g in groups)
+    total_sent = stats.sent or 0
+    total_failed = stats.failed or 0
+    total_messages = total_sent + total_failed
     
     overall_success_rate = 0
     if total_messages > 0:
         overall_success_rate = round((total_sent / total_messages) * 100, 1)
     
-    # Top 5 most active groups
-    top_groups = sorted(
-        [g for g in groups if g.messages_sent > 0],
-        key=lambda x: x.messages_sent,
-        reverse=True
-    )[:5]
+    # Top 5 most active groups (using DB sort)
+    top_groups = db.query(Group).filter(Group.messages_sent > 0).order_by(
+        desc(Group.messages_sent)
+    ).limit(5).all()
     
-    # Groups with issues (low success rate)
+    # Groups with issues (DB filtering for success rate < 80%)
+    # Note: Complex math in WHERE clause can be slow, but better than loading all.
+    # We select groups with failures and check rate in python for simplicity on small datasets,
+    # or rely on Sent/Total ratio if supported by DB dialect.
+    # Here we stick to Python filter for the specific "problem" logic but on a reduced set if possible.
+    # For now, fetching groups with failures is a good start.
+    groups_with_failures = db.query(Group).filter(Group.messages_failed > 0).all()
     problem_groups = [
-        g for g in groups 
-        if (g.messages_sent + g.messages_failed) > 0 and g.success_rate < 80
-    ]
+        g for g in groups_with_failures 
+        if g.success_rate < 80
+    ][:10]
     
-    # Inactive groups (no messages in 30+ days or never sent)
-    from datetime import datetime, timedelta
+    # Inactive groups (30+ days)
     thirty_days_ago = datetime.now() - timedelta(days=30)
-    inactive_groups = [
-        g for g in groups
-        if g.last_message_at is None or g.last_message_at < thirty_days_ago
-    ]
+    inactive_groups = db.query(Group).filter(
+        (Group.last_message_at == None) | (Group.last_message_at < thirty_days_ago)
+    ).limit(10).all()
     
     return {
         "overview": {
-            "total_groups": len(groups),
-            "active_groups": len([g for g in groups if g.is_active]),
+            "total_groups": total_groups,
+            "active_groups": active_groups,
             "total_messages_sent": total_sent,
             "total_messages_failed": total_failed,
             "overall_success_rate": overall_success_rate
@@ -223,8 +232,7 @@ async def get_group_analytics(db: Session = Depends(get_db)):
                 "title": g.title,
                 "messages_sent": g.messages_sent,
                 "success_rate": g.success_rate
-            }
-            for g in top_groups
+            } for g in top_groups
         ],
         "problem_groups": [
             {
@@ -232,27 +240,32 @@ async def get_group_analytics(db: Session = Depends(get_db)):
                 "title": g.title,
                 "success_rate": g.success_rate,
                 "total_attempts": g.messages_sent + g.messages_failed
-            }
-            for g in problem_groups
+            } for g in problem_groups
         ],
         "inactive_groups": [
             {
                 "id": g.id,
                 "title": g.title,
                 "last_message_at": g.last_message_at.isoformat() if g.last_message_at else None
-            }
-            for g in inactive_groups[:10]  # Limit to 10
+            } for g in inactive_groups
         ]
     }
 
 
 @router.delete("/{group_id}")
 async def delete_group(group_id: int, db: Session = Depends(get_db)):
-    """Remove group from database."""
+    """Remove group if safe."""
     group = db.query(Group).filter(Group.id == group_id).first()
     
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
+    
+    # Safety check: Don't delete if it has message history
+    if group.messages_sent > 0 or group.messages_failed > 0:
+         raise HTTPException(
+             status_code=400, 
+             detail="Cannot delete group with message history. Deactivate it instead."
+         )
     
     db.delete(group)
     db.commit()

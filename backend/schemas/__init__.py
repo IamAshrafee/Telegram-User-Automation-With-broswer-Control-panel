@@ -1,7 +1,7 @@
 from backend.schemas.auth import SendCodeRequest, VerifyCodeRequest, SessionStatusResponse, AuthResponse
-from backend.schemas.group import GroupCreate, GroupUpdate, GroupResponse, GroupSyncResponse
+from backend.schemas.group import GroupCreate, GroupUpdate, GroupResponse, GroupSyncResponse, GroupPaginatedResponse
 from backend.schemas.media import MediaUploadResponse, MediaListResponse, MediaDeleteResponse, PaginatedMediaResponse
-from backend.schemas.message import MessageCreate, BulkMessageCreate, MessageUpdate, MessageResponse, MessageSendResponse
+from backend.schemas.message import MessageCreate, BulkMessageCreate, MessageUpdate, MessageResponse, MessageSendResponse, MessagePaginatedResponse
 
 __all__ = [
     "SendCodeRequest",
@@ -12,6 +12,7 @@ __all__ = [
     "GroupUpdate",
     "GroupResponse",
     "GroupSyncResponse",
+    "GroupPaginatedResponse",
     "MediaUploadResponse",
     "MediaListResponse",
     "MediaDeleteResponse",
@@ -21,4 +22,5 @@ __all__ = [
     "MessageUpdate",
     "MessageResponse",
     "MessageSendResponse",
+    "MessagePaginatedResponse",
 ]

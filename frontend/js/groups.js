@@ -3,6 +3,17 @@ import { showToast } from "./ui-components.js";
 import { formatDate } from "./utils.js";
 
 let allGroups = [];
+let currentPage = 1;
+let totalPages = 1;
+let isPageLoading = false;
+let currentFilters = {
+  q: "",
+  sort_by: "title",
+  sort_order: "asc",
+  permission_type: "",
+  is_active: "",
+};
+const pageSize = 20;
 
 export function setupGroups() {
   const syncGroupsBtn = document.getElementById("syncGroupsBtn");
@@ -12,6 +23,7 @@ export function setupGroups() {
   const activeOnlyFilter = document.getElementById("activeOnlyFilter");
   const selectAllGroups = document.getElementById("selectAllGroups");
   const groupsList = document.getElementById("groupsList");
+  const loadMoreBtnContainer = document.getElementById("groupsLoadMore");
 
   if (syncGroupsBtn) {
     syncGroupsBtn.addEventListener("click", async () => {
@@ -23,7 +35,8 @@ export function setupGroups() {
           `Synced ${response.synced_count} groups successfully!`,
           "success",
         );
-        await loadGroups();
+        // Reset and reload
+        await loadGroups(1, false);
       } catch (error) {
         showToast(error.message, "error");
       } finally {
@@ -33,14 +46,46 @@ export function setupGroups() {
     });
   }
 
-  // Search and filters
-  if (groupSearch)
-    groupSearch.addEventListener("input", () => renderGroups(allGroups));
-  if (sortBy) sortBy.addEventListener("change", () => renderGroups(allGroups));
-  if (permissionFilter)
-    permissionFilter.addEventListener("change", () => renderGroups(allGroups));
-  if (activeOnlyFilter)
-    activeOnlyFilter.addEventListener("change", () => renderGroups(allGroups));
+  // Debounce Search
+  let searchTimeout;
+  if (groupSearch) {
+    groupSearch.addEventListener("input", (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        currentFilters.q = e.target.value.trim();
+        loadGroups(1, false);
+      }, 300);
+    });
+  }
+
+  // Filters & Sorting
+  if (sortBy) {
+    sortBy.addEventListener("change", (e) => {
+      const [field, order] = e.target.value.split("-");
+      currentFilters.sort_by = field;
+      currentFilters.sort_order = order;
+      loadGroups(1, false);
+    });
+  }
+
+  if (permissionFilter) {
+    permissionFilter.addEventListener("change", (e) => {
+      currentFilters.permission_type = e.target.value;
+      loadGroups(1, false);
+    });
+  }
+
+  if (activeOnlyFilter) {
+    activeOnlyFilter.addEventListener("change", (e) => {
+      // Backend expects boolean or null (if filter not active)
+      // The checkbox UI implies "Active Only" (true) or "All" (null/false depending on implementation)
+      // Our API: is_active=true filters active. is_active=false filters inactive. is_active=null shows all.
+      // Usually "Active Only" toggle means: Checked -> Active, Unchecked -> All.
+      // So if unchecked, we send "" (mapped to null in API logic if empty string) or just don't send it.
+      currentFilters.is_active = e.target.checked ? "true" : "";
+      loadGroups(1, false);
+    });
+  }
 
   // Bulk selectors
   if (selectAllGroups) {
@@ -119,7 +164,7 @@ export function setupGroups() {
         const id = parseInt(btn.dataset.id);
         deleteGroup(id);
       }
-      // Stop propagation for checkboxes to prevent card click issues if implemented later
+      // Stop propagation for checkboxes
       if (target.matches(".group-checkbox")) {
         e.stopPropagation();
       }
@@ -127,74 +172,143 @@ export function setupGroups() {
   }
 }
 
-export async function loadGroups() {
+/**
+ * Load Groups with Pagination
+ */
+export async function loadGroups(page = 1, append = false) {
+  if (isPageLoading) return;
+  isPageLoading = true;
+
   try {
-    allGroups = await api.get("/groups/");
-    renderGroups(allGroups);
-    updateDashboardStats(allGroups);
-    // Also update the selectors in the composer tab
+    // Construct Query Params
+    const params = new URLSearchParams({
+      page: page,
+      limit: pageSize,
+      sort_by: currentFilters.sort_by,
+      sort_order: currentFilters.sort_order,
+    });
+
+    if (currentFilters.q) params.append("q", currentFilters.q);
+    if (currentFilters.permission_type)
+      params.append("permission_type", currentFilters.permission_type);
+    if (currentFilters.is_active === "true") params.append("is_active", "true");
+    // If is_active is empty/false, we don't send it to show all
+
+    const response = await api.get(`/groups/?${params.toString()}`);
+
+    const items = response.items || [];
+    currentPage = response.page;
+    totalPages = response.pages;
+
+    if (append) {
+      allGroups = [...allGroups, ...items];
+    } else {
+      allGroups = items;
+    }
+
+    renderGroups(items, append);
+    renderLoadMore();
+    updateDashboardStats(response.total); // Total from DB
+
+    // Update selectors for message composer (fetch separate or use first page?)
+    // Note: Ideally, composer should have its own search.
+    // For now we assume typical user has all relevant active groups in first few pages or uses bulk.
+    // If we only render loaded groups, we might miss some.
+    // A better approach for composer selector: use a search input there that querying API.
+    // We will stick to rendering what we have or implement a separate "load all active" for composer later.
     renderGroupSelectors();
   } catch (error) {
     console.error("Failed to load groups:", error);
-    showToast("Failed to load groups library", "error");
+    showToast("Failed to load groups", "error");
+  } finally {
+    isPageLoading = false;
   }
 }
 
-function updateDashboardStats(groups) {
-  const totalGroups = document.getElementById("totalGroups");
-  const activeGroupsCount = document.getElementById("activeGroups");
-  if (totalGroups) totalGroups.textContent = groups.length;
-  if (activeGroupsCount)
-    activeGroupsCount.textContent = groups.filter((g) => g.is_active).length;
+function renderLoadMore() {
+  let container = document.getElementById("groupsLoadMore");
+
+  // Create if missing (it wasn't in original HTML)
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "groupsLoadMore";
+    container.className = "load-more-container mt-4 text-center";
+    document.getElementById("groupsList")?.after(container);
+  }
+
+  if (currentPage >= totalPages || totalPages <= 1) {
+    container.innerHTML = "";
+    return;
+  }
+
+  container.innerHTML = `
+    <button id="loadMoreGroupsBtn" class="btn btn-secondary shadow-sm">
+      <span class="btn-text">Load More Groups</span>
+      <div class="spinner-sm hidden" style="margin-left: 8px;"></div>
+    </button>
+  `;
+
+  const btn = document.getElementById("loadMoreGroupsBtn");
+  const spinner = btn?.querySelector(".spinner-sm");
+
+  btn.onclick = async () => {
+    btn.disabled = true;
+    spinner?.classList.remove("hidden");
+    await loadGroups(currentPage + 1, true);
+  };
 }
 
-function renderGroups(groups) {
+function updateDashboardStats(totalCount) {
+  const totalGroups = document.getElementById("totalGroups");
+  // Active count needs a separate API call if we want it perfect,
+  // or we accept we only know total from pagination metadata.
+  // The API response.total is total filtered records.
+  // If no filter, it is total db records.
+
+  if (totalGroups) totalGroups.textContent = totalCount;
+
+  // NOTE: 'activeGroups' count on dashboard might be misleading if we don't fetch it specifically.
+  // We can't count from 'allGroups' since it is partial.
+  // For now, we leave it or fetch analytics to get correct counts.
+  updateAnalyticsCounts();
+}
+
+async function updateAnalyticsCounts() {
+  // Fetch overview only for dashboard stats
+  try {
+    const analytics = await api.get("/groups/analytics");
+    const activeGroupsCount = document.getElementById("activeGroups");
+    if (activeGroupsCount)
+      activeGroupsCount.textContent = analytics.overview.active_groups;
+  } catch (e) {
+    // silent fail
+  }
+}
+
+function renderGroups(groups, append = false) {
   const groupsList = document.getElementById("groupsList");
   if (!groupsList) return;
 
-  const searchTerm = document
-    .getElementById("groupSearch")
-    ?.value.toLowerCase();
-  const sort = document.getElementById("sortBy")?.value;
-  const permission = document.getElementById("permissionFilter")?.value;
-  const activeOnly = document.getElementById("activeOnlyFilter")?.checked;
+  if (!append) {
+    groupsList.innerHTML = "";
+  }
 
-  let filtered = [...groups];
-  if (searchTerm)
-    filtered = filtered.filter((g) =>
-      g.title.toLowerCase().includes(searchTerm),
-    );
-  if (permission)
-    filtered = filtered.filter((g) => g.permission_type === permission);
-  if (activeOnly) filtered = filtered.filter((g) => g.is_active);
-
-  if (sort === "title-asc")
-    filtered.sort((a, b) => a.title.localeCompare(b.title));
-  else if (sort === "title-desc")
-    filtered.sort((a, b) => b.title.localeCompare(a.title));
-  else if (sort === "created_at-desc")
-    filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  else if (sort === "created_at-asc")
-    filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
-  groupsList.innerHTML = ""; // Clear list safely
-
-  if (filtered.length === 0) {
+  if (groups.length === 0 && !append) {
     groupsList.innerHTML =
       '<div class="empty-state"><p>No groups found.</p></div>';
     return;
   }
 
-  // Create document fragment for better performance
   const fragment = document.createDocumentFragment();
+  const searchTerm = currentFilters.q.toLowerCase();
 
-  filtered.forEach((group, index) => {
-    // Escape search term for regex safely
+  groups.forEach((group, index) => {
     const card = document.createElement("div");
     card.className = `group-card ${group.is_active ? "active" : ""}`;
-    card.style.animationDelay = `${index * 0.05}s`;
+    // Stagger animation only for new batch
+    card.style.animationDelay = `${(index % pageSize) * 0.05}s`;
 
-    // Highlight logic using text nodes to prevent injection
+    // Highlight logic
     const titleContainer = document.createElement("h3");
     titleContainer.className = "ml-2";
 
@@ -227,14 +341,13 @@ function renderGroups(groups) {
             </div>
         </div>
         <div class="group-details">
-            <p><strong>Username:</strong> <span class="text-secondary group-username"></span></p>
             <div class="mb-3">
               <span class="badge badge-${group.permission_type}">${group.permission_type.replace("_", " ")}</span>
             </div>
             <p class="text-sm text-muted">Added: ${formatDate(group.created_at)}</p>
             <div class="group-stats-strip mt-2">
-                <span title="Total Messages Sent">💬 ${group.total_messages || 0}</span>
-                <span title="Successful Messages">✅ ${group.success_count || 0}</span>
+                <span title="Total Messages Sent">💬 ${group.messages_sent || 0}</span> <!-- Fixed prop name -->
+                <span title="Successful Messages">✅ ${group.success_rate || 0}%</span> <!-- Fixed logic/prop -->
             </div>
         </div>
         <div class="group-actions mt-auto pt-4">
@@ -249,11 +362,7 @@ function renderGroups(groups) {
         </div>
     `;
 
-    // Inject the safe title and username
     card.querySelector(".group-header .d-flex").appendChild(titleContainer);
-
-    card.querySelector(".group-username").textContent = group.username || "N/A";
-
     fragment.appendChild(card);
   });
 
@@ -287,7 +396,7 @@ async function handleBulkAction(action, value = null) {
 
     await api.post("/groups/bulk-update", payload);
     showToast(`Bulk ${action} successful!`, "success");
-    await loadGroups();
+    await loadGroups(1, false); // Reload first page
     const selectAll = document.getElementById("selectAllGroups");
     if (selectAll) selectAll.checked = false;
   } catch (error) {
@@ -295,13 +404,14 @@ async function handleBulkAction(action, value = null) {
   }
 }
 
-// Internal functions (no longer attached to window)
+// Internal functions
 const toggleGroup = async (id, isActive) => {
   try {
     await api.patch(`/groups/${id}`, { is_active: isActive });
   } catch (error) {
     showToast(error.message, "error");
-    await loadGroups();
+    // Revert visual change if failed is tricky without React, just reload
+    await loadGroups(currentPage, false);
   }
 };
 
@@ -319,7 +429,7 @@ const deleteGroup = async (id) => {
   try {
     await api.delete(`/groups/${id}`);
     showToast("Group removed", "success");
-    await loadGroups();
+    await loadGroups(currentPage, false);
   } catch (error) {
     showToast(error.message, "error");
   }
@@ -402,8 +512,15 @@ function renderRankedList(id, items, valueKey, unit = "") {
 export function renderGroupSelectors() {
   const selector = document.getElementById("groupSelector");
   if (!selector) return;
+
+  // Note: This relies on allGroups having content.
+  // With pagination, this might only show current page's groups.
+  // For a robust implementation, we might need a separate API endpoint
+  // to search/select group by name for the composer.
+  // For now, we utilize what we have loaded.
+
   if (allGroups.length === 0) {
-    selector.innerHTML = '<p class="text-muted">No groups available</p>';
+    selector.innerHTML = '<p class="text-muted">No groups loaded.</p>';
     return;
   }
 

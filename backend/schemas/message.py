@@ -54,10 +54,20 @@ class MessageResponse(BaseModel):
 
 
 class MessageSendResponse(BaseModel):
-    """Response schema for message send operation."""
+    """Response schema for message sending initiation."""
     success: bool
     message: str
     message_id: int
     sent_count: int
     failed_count: int
     skipped_count: int
+
+
+class MessagePaginatedResponse(BaseModel):
+    """Response schema for paginated message history."""
+    items: List[MessageResponse]
+    total: int
+    page: int
+    pages: int
+    has_next: bool
+    has_prev: bool

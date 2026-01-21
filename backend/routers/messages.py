@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.orm import Session
 from backend.database import get_db
-from backend.schemas import MessageCreate, BulkMessageCreate, MessageResponse, MessageSendResponse, MessageUpdate
+from backend.schemas import MessageCreate, BulkMessageCreate, MessageResponse, MessageSendResponse, MessageUpdate, MessagePaginatedResponse
 from backend.models import Message, MessageStatus, Group
 from backend.services import message_service, telegram_service, settings_service
 from backend.utils.logger import setup_logger
 from typing import List
 from datetime import datetime, timezone
+import math
+
 try:
     from zoneinfo import ZoneInfo
 except ImportError:
@@ -184,17 +186,30 @@ async def get_message_status(message_id: int, db: Session = Depends(get_db)):
     return message
 
 
-@router.get("/history", response_model=List[MessageResponse])
+@router.get("/history", response_model=MessagePaginatedResponse)
 async def get_message_history(
-    limit: int = 50,
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db)
 ):
-    """Get sent message history."""
-    messages = db.query(Message).filter(
+    """Get sent message history with pagination."""
+    query = db.query(Message).filter(
         Message.status.in_([MessageStatus.SENT, MessageStatus.FAILED])
-    ).order_by(Message.created_at.desc()).limit(limit).all()
+    ).order_by(Message.created_at.desc())
     
-    return messages
+    total = query.count()
+    pages = math.ceil(total / limit)
+    offset = (page - 1) * limit
+    items = query.offset(offset).limit(limit).all()
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "pages": pages,
+        "has_next": page < pages,
+        "has_prev": page > 1
+    }
 
 
 @router.post("/preview")
@@ -204,9 +219,7 @@ async def preview_message(
 ):
     """Preview message with actual group data (first 3 groups)"""
     try:
-        from backend.models import Group
         from backend.utils.message_validators import estimate_send_time, format_time_estimate
-        from datetime import datetime
         
         # Try to import text_processor, if it doesn't exist, use simple processing
         try:
