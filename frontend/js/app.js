@@ -1,5 +1,7 @@
 // API Configuration
-const API_BASE = window.location.origin;
+// Support hosting under a subpath (e.g. /sys-admin-panel/)
+const API_BASE =
+  window.location.origin + window.location.pathname.replace(/\/$/, "");
 
 // API Client
 class APIClient {
