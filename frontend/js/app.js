@@ -2,12 +2,14 @@
 // Support hosting under a subpath (e.g. /sys-admin-panel/)
 export const API_BASE = (() => {
   const path = window.location.pathname;
-  // If we are at /path/index.html, we want /path
+  let base = "";
   if (path.includes(".html")) {
-    return window.location.origin + path.substring(0, path.lastIndexOf("/"));
+    base = path.substring(0, path.lastIndexOf("/"));
+  } else {
+    base = path;
   }
-  // Remove trailing slash for consistency
-  return window.location.origin + path.replace(/\/$/, "");
+  // Remove all trailing slashes and return origin + base
+  return window.location.origin + base.replace(/\/+$/, "");
 })();
 
 // API Client

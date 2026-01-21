@@ -508,4 +508,15 @@ function setupAnalytics() {
   });
 }
 
+function updateDashboardStats() {
+  const total = allGroups.length;
+  const active = allGroups.filter((g) => g.is_active).length;
+  if (document.getElementById("totalGroups")) {
+    document.getElementById("totalGroups").textContent = total;
+  }
+  if (document.getElementById("activeGroups")) {
+    document.getElementById("activeGroups").textContent = active;
+  }
+}
+
 export { allGroups };

@@ -78,6 +78,7 @@ export async function loadMedia(page = 1) {
       currentPage = 1;
       totalPages = 1;
       mediaFiles = page === 1 ? items : [...mediaFiles, ...items];
+      updateDashboardStats(items.length);
     } else if (response && Array.isArray(response.items)) {
       // Handle paginated response
       items = response.items;
@@ -238,6 +239,7 @@ async function uploadFiles(filesList) {
   try {
     let uploadedCount = 0;
     let failedCount = 0;
+    const allDuplicates = [];
 
     // Process in batches of 5 for stability
     const BATCH_SIZE = 5;
@@ -263,19 +265,27 @@ async function uploadFiles(filesList) {
         if (response.uploaded) uploadedCount += response.uploaded.length;
         if (response.failed) failedCount += response.failed.length;
 
-        // Handle duplicates sequentially for each batch if needed
+        // Collect duplicates to handle after batches are done
         if (response.duplicates && response.duplicates.length > 0) {
-          for (const dup of response.duplicates) {
+          response.duplicates.forEach((dup) => {
             const originalFile = batch.find((f) => f.name === dup.filename);
             if (originalFile) {
-              await handleDuplicate(originalFile, dup);
+              allDuplicates.push({ file: originalFile, info: dup });
             }
-          }
+          });
         }
       } catch (e) {
         console.error("Batch upload failed:", e);
         failedCount += batch.length;
-        showToast(`Batch ending at ${i + batch.length} failed.`, "error");
+        showToast(`Batch failed. Moving to next...`, "error");
+      }
+    }
+
+    // Now handle all duplicates one by one
+    if (allDuplicates.length > 0) {
+      uploadContent.innerHTML = `<p>Resolving ${allDuplicates.length} duplicates...</p>`;
+      for (const item of allDuplicates) {
+        await handleDuplicate(item.file, item.info);
       }
     }
 
@@ -615,4 +625,11 @@ function updateMediaSelectorsUI() {
       btn.disabled = mediaFiles.length === 0;
     }
   });
+}
+
+function updateDashboardStats(total) {
+  const statEl = document.getElementById("totalMedia");
+  const countEl = document.getElementById("totalMediaCount");
+  if (statEl) statEl.textContent = total;
+  if (countEl) countEl.textContent = total;
 }
