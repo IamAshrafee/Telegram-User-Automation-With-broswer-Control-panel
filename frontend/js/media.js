@@ -1,4 +1,4 @@
-import { api, formatFileSize } from "./app.js";
+import { api, formatFileSize, API_BASE } from "./app.js";
 import { showToast, confirmAction } from "./ui-components.js";
 
 // State
@@ -70,7 +70,6 @@ export async function loadMedia(page = 1) {
 
   try {
     const response = await api.get(`/media/?page=${page}&limit=${limit}`);
-    console.log("Media API Response:", response);
 
     let items = [];
     if (Array.isArray(response)) {
@@ -140,9 +139,9 @@ export function renderMediaCard(media) {
   return `
     <div class="media-card" id="media-${media.id}">
         <div class="media-card-img-wrapper">
-            <img src="${media.url}" alt="${media.filename}" loading="lazy" />
+            <img src="${API_BASE}/media/${media.id}" alt="${media.filename}" loading="lazy" />
             <div class="media-card-overlay">
-                <button class="btn btn-sm btn-light copy-btn" data-url="${window.location.origin}${media.url}" title="Copy Link">
+                <button class="btn btn-sm btn-light copy-btn" data-url="${API_BASE}/media/${media.id}" title="Copy Link">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                 </button>
                 <button class="btn btn-sm btn-danger delete-btn" data-media-id="${media.id}" title="Delete">
@@ -526,12 +525,12 @@ function setupImageSelectorTriggers() {
       const div = document.createElement("div");
       div.className = `image-selector-item ${String(media.id) === String(currentId) ? "selected" : ""}`;
       div.dataset.id = media.id;
-      div.dataset.url = `/media/${media.id}`;
+      div.dataset.url = `${API_BASE}/media/${media.id}`;
       div.dataset.name = media.filename;
 
       div.innerHTML = `
             <div class="check-badge">✓</div>
-            <div class="img-wrapper"><img src="/media/${media.id}" loading="lazy"></div>
+            <div class="img-wrapper"><img src="${API_BASE}/media/${media.id}" loading="lazy"></div>
             <div class="image-selector-name">${media.filename}</div>
         `;
 

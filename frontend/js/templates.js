@@ -138,7 +138,7 @@ export function autoSaveDraft() {
 // Load draft on page load
 export async function loadDraft() {
   try {
-    const draft = await api.get("/templates/draft");
+    const draft = await api.request("/templates/draft", { silent: true });
 
     if (draft.text) document.getElementById("messageText").value = draft.text;
     if (draft.link) document.getElementById("messageLink").value = draft.link;

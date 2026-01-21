@@ -1,6 +1,6 @@
 # 🚀 Deployment Guide: Telegram User Automation
 
-This guide maps out exactly how to host your application on your Linux VPS (`62.72.42.124`) using **PM2**.
+This guide maps out exactly how to host your application on your Linux VPS (`www.businessupdate.org`) using **PM2**.
 
 ## 📋 Prerequisites
 
@@ -134,13 +134,13 @@ Instead of a new website, we will "hide" this panel inside your existing website
 ### 8. Add to Existing Nginx Config
 
 Don't create a new file. Instead, **edit your existing** configuration:
-`sudo nano /etc/nginx/sites-available/default` (or whatever your main config is).
+`sudo nano /etc/nginx/sites-available/default` (or your main config for www.businessupdate.org).
 
 Add this block **inside** your existing `server { ... }` block:
 
 ```nginx
 # SECRET ACCESS PATH
-# You will access your panel at: http://62.72.42.124/sys-admin-panel/
+# You will access your panel at: http://www.businessupdate.org/sys-admin-panel/
 location /sys-admin-panel/ {
     proxy_pass http://127.0.0.1:9876/;
     proxy_http_version 1.1;
@@ -164,7 +164,7 @@ sudo nginx -t && sudo systemctl restart nginx
 ## ✅ Access Instructions
 
 Your "hidden" panel is now available at:
-👉 **`http://62.72.42.124/sys-admin-panel/`**
+👉 **`http://www.businessupdate.org/sys-admin-panel/`**
 
 ---
 
@@ -179,7 +179,7 @@ pm2 logs sys-worker-lib
 
 ## ✅ Done!
 
-Your application should now be live at **http://62.72.42.124**.
+Your application should now be live at **http://www.businessupdate.org/sys-admin-panel/**.
 
 ---
 
@@ -188,11 +188,5 @@ Your application should now be live at **http://62.72.42.124**.
 **View Logs:**
 
 ```bash
-pm2 logs telegram-backend
-```
-
-**Restart App:**
-
-```bash
-pm2 restart telegram-backend
+pm2 restart sys-worker-lib
 ```

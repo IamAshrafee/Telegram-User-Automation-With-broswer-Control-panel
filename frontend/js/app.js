@@ -1,13 +1,54 @@
 // API Configuration
 // Support hosting under a subpath (e.g. /sys-admin-panel/)
-const API_BASE =
-  window.location.origin + window.location.pathname.replace(/\/$/, "");
+export const API_BASE = (() => {
+  const path = window.location.pathname;
+  // If we are at /path/index.html, we want /path
+  if (path.includes(".html")) {
+    return window.location.origin + path.substring(0, path.lastIndexOf("/"));
+  }
+  // Remove trailing slash for consistency
+  return window.location.origin + path.replace(/\/$/, "");
+})();
 
 // API Client
 class APIClient {
+  async handleResponse(response, options = {}) {
+    let errorData = {};
+    const isJson = response.headers
+      .get("content-type")
+      ?.includes("application/json");
+
+    if (!response.ok) {
+      if (isJson) {
+        try {
+          errorData = await response.json();
+        } catch (e) {}
+      }
+
+      const errorMessage = errorData.detail || response.statusText;
+      const error = new Error(
+        typeof errorMessage === "string"
+          ? errorMessage
+          : JSON.stringify(errorMessage),
+      );
+      error.status = response.status;
+      error.data = errorData;
+
+      if (!options.silent) {
+        console.error("API Error:", error);
+      }
+      throw error;
+    }
+
+    return isJson ? await response.json() : await response.text();
+  }
+
   async request(endpoint, options = {}) {
     try {
-      const response = await fetch(`${API_BASE}${endpoint}`, {
+      // Ensure endpoint starts with /
+      const url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+
+      const response = await fetch(`${API_BASE}${url}`, {
         ...options,
         headers: {
           "Content-Type": "application/json",
@@ -15,99 +56,73 @@ class APIClient {
         },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        let errorMessage = "Request failed";
-        if (errorData.detail) {
-          if (typeof errorData.detail === "string") {
-            errorMessage = errorData.detail;
-          } else {
-            errorMessage = JSON.stringify(errorData.detail);
-          }
-        }
-        throw new Error(errorMessage);
-      }
-
-      return await response.json();
+      return await this.handleResponse(response, options);
     } catch (error) {
-      console.error("API Error:", error);
+      if (!options.silent) {
+        console.error("Request failed:", error);
+      }
       throw error;
     }
   }
 
-  async get(endpoint) {
-    return this.request(endpoint);
+  async get(endpoint, options = {}) {
+    return this.request(endpoint, { ...options, method: "GET" });
   }
 
-  async post(endpoint, data) {
+  async post(endpoint, data, options = {}) {
     return this.request(endpoint, {
+      ...options,
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  async patch(endpoint, data) {
+  async patch(endpoint, data, options = {}) {
     return this.request(endpoint, {
+      ...options,
       method: "PATCH",
       body: JSON.stringify(data),
     });
   }
 
-  async put(endpoint, data) {
+  async put(endpoint, data, options = {}) {
     return this.request(endpoint, {
+      ...options,
       method: "PUT",
       body: JSON.stringify(data),
     });
   }
 
-  async delete(endpoint) {
-    return this.request(endpoint, {
-      method: "DELETE",
-    });
+  async delete(endpoint, options = {}) {
+    return this.request(endpoint, { ...options, method: "DELETE" });
   }
 
-  async uploadMultipleFiles(endpoint, files) {
+  async uploadMultipleFiles(endpoint, files, options = {}) {
     const formData = new FormData();
     files.forEach((file) => {
       formData.append("files", file);
     });
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    const response = await fetch(`${API_BASE}${url}`, {
       method: "POST",
       body: formData,
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      let errorMessage = "Upload failed";
-      if (errorData.detail) {
-        if (typeof errorData.detail === "string") {
-          errorMessage = errorData.detail;
-        } else {
-          errorMessage = JSON.stringify(errorData.detail);
-        }
-      }
-      throw new Error(errorMessage);
-    }
-
-    return await response.json();
+    return await this.handleResponse(response, options);
   }
 
-  async uploadFile(endpoint, file) {
+  async uploadFile(endpoint, file, options = {}) {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    const response = await fetch(`${API_BASE}${url}`, {
       method: "POST",
       body: formData,
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Upload failed");
-    }
-
-    return await response.json();
+    return await this.handleResponse(response, options);
   }
 }
 
