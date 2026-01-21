@@ -716,9 +716,12 @@
             </div>
 
             <!-- Gallery Grid -->
-            <div id="mediaGallery" class="media-gallery">
+            <div id="mediaGallery" class="media-gallery-grid">
               <!-- JS renders items here -->
             </div>
+
+            <!-- Pagination -->
+            <div id="mediaPagination" class="pagination-container mt-6"></div>
           </div>
         </section>
 
@@ -872,6 +875,27 @@
           </div>
         </section>
       </main>
+    </div>
+
+    <!-- Duplicate Resolution Modal -->
+    <div id="duplicateModal" class="duplicate-modal-overlay">
+      <div class="duplicate-modal">
+        <div class="duplicate-modal-header">
+          <h3>Duplicate File Detected</h3>
+          <p id="duplicateFileName" class="text-muted"></p>
+        </div>
+        <div class="duplicate-modal-body">
+          <div class="duplicate-preview">
+            <img id="duplicatePreviewImg" src="" alt="Preview">
+          </div>
+          <p>What would you like to do with this file?</p>
+        </div>
+        <div class="duplicate-modal-actions">
+          <button id="replaceDuplicateBtn" class="btn btn-primary">🔄 Replace Existing</button>
+          <button id="keepBothBtn" class="btn btn-secondary">➕ Keep Both (Rename)</button>
+          <button id="cancelUploadBtn" class="btn btn-outline-danger">✕ Skip This File</button>
+        </div>
+      </div>
     </div>
 
     <!-- Image Selector Modal -->

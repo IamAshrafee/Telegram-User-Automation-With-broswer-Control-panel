@@ -1,6 +1,7 @@
 import { api } from "./api.js";
 import { showToast, confirmAction } from "./ui-components.js";
 import { formatDate } from "./utils.js";
+import { progressWidget } from "./progress-widget.js";
 
 let messageHistory = [];
 let filteredHistory = [];
@@ -100,11 +101,15 @@ async function handleSendMessage() {
       endpoint = isScheduled ? "/messages/schedule" : "/messages/send";
     }
 
-    await api.post(endpoint, payload);
+    const response = await api.post(endpoint, payload);
     showToast(
       isScheduled ? "Message scheduled!" : "Message sending started!",
       "success",
     );
+
+    if (!isScheduled && response && response.message_id) {
+      progressWidget.startTracking(response.message_id);
+    }
 
     if (!isScheduled) {
       document.getElementById("messageText").value = "";
