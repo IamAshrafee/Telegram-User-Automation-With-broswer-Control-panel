@@ -4,6 +4,30 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Telegram Automation System</title>
+    <script>
+      // 🚨 Stealth Mode Diagnostic Guard
+      window.onerror = function(msg, url, lineNo, columnNo, error) {
+        console.error('CRITICAL ERROR:', msg, url, lineNo);
+        const errDiv = document.createElement('div');
+        errDiv.style = 'position:fixed;bottom:10px;right:10px;background:red;color:white;padding:10px;z-index:100000;font-size:12px;border-radius:5px;max-width:300px;';
+        errDiv.innerHTML = '<b>JS Error:</b> ' + msg + '<br><small>Line: ' + lineNo + '</small>';
+        document.body.appendChild(errDiv);
+        return false;
+      };
+
+      // Subpath Trailing Slash Failsafe
+      (function() {
+        const path = window.location.pathname;
+        if (path !== '/' && !path.endsWith('/') && !path.includes('.')) {
+          window.location.replace(path + '/');
+        }
+      })();
+    </script>
+    <style>
+      #bootStatus { position: fixed; top: 10px; right: 10px; background: rgba(0,51,102,0.8); color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; z-index: 99999; display: flex; align-items: center; gap: 8px; }
+      .spinner-small { width: 12px; height: 12px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
     <link rel="stylesheet" href="css/variables.css" />
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="stylesheet" href="css/components.css" />
@@ -16,6 +40,12 @@
     />
   </head>
   <body>
+    <!-- Boot Status Indicator -->
+    <div id="bootStatus">
+      <div class="spinner-small"></div>
+      <span>System Loading...</span>
+    </div>
+
     <!-- Authentication Modal -->
     <div id="authModal" class="modal">
       <div class="modal-content text-center">

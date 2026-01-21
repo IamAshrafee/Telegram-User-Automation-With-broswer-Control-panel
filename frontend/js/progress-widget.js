@@ -1,4 +1,5 @@
-import { api, formatDate } from "./app.js";
+import { api } from "./api.js";
+import { formatDate } from "./utils.js";
 
 class ProgressWidget {
   constructor() {
@@ -17,11 +18,11 @@ class ProgressWidget {
   createWidgetDOM() {
     if (document.getElementById("progress-widget")) return; // Already exists
 
-    // Target the embedded container first
+    // Target the embedded container first (this is inside the Compose tab in index.html)
     const container = document.getElementById("embedded-progress-container");
     if (!container) {
       console.warn(
-        "Embedded progress container not found, falling back to body",
+        "[Progress] Embedded progress container not found, falling back to body",
       );
     }
 
@@ -57,16 +58,14 @@ class ProgressWidget {
             <div class="progress-bar-fill" id="progress-bar-fill" style="width: 0%"></div>
         </div>
         <div class="progress-log" id="progress-log">
-            <!-- Log items -->
+            <!-- Log items appear here -->
         </div>
       </div>
     `;
 
-    // Append to container if exists, else body (but if body, it needs fixed position styles)
     if (container) {
-      container.innerHTML = ""; // Clear any previous
+      container.innerHTML = "";
       container.appendChild(div);
-      // Make sure container is visible
       container.style.display = "block";
     } else {
       document.body.appendChild(div);
@@ -78,27 +77,29 @@ class ProgressWidget {
     const body = div.querySelector(".progress-body");
     const toggleBtn = div.querySelector("#minimizeProgressBtn");
 
-    toggleBtn.onclick = () => {
-      const isHidden = body.classList.contains("hidden");
-      if (isHidden) {
-        body.classList.remove("hidden");
-        toggleBtn.textContent = "_";
-      } else {
-        body.classList.add("hidden");
-        toggleBtn.textContent = "□"; // Maximise icon
-      }
-    };
+    if (toggleBtn) {
+      toggleBtn.onclick = () => {
+        const isHidden = body.classList.contains("hidden");
+        if (isHidden) {
+          body.classList.remove("hidden");
+          toggleBtn.textContent = "_";
+        } else {
+          body.classList.add("hidden");
+          toggleBtn.textContent = "□";
+        }
+      };
+    }
   }
 
   async checkForActiveJobs() {
     try {
       const activeJobs = await api.get("/messages/active");
       if (activeJobs && activeJobs.length > 0) {
-        // Pick the first one for now
+        // Track the most recent active job
         this.startTracking(activeJobs[0].id);
       }
     } catch (e) {
-      console.error("Failed to check active jobs", e);
+      console.error("[Progress] Failed to poll active jobs:", e.message);
     }
   }
 
@@ -107,10 +108,8 @@ class ProgressWidget {
     this.activeMessageId = messageId;
     this.show();
 
-    // Immediate check
+    // Kick off status polling
     this.updateStatus();
-
-    // Poll
     this.checkInterval = setInterval(
       () => this.updateStatus(),
       this.pollInterval,
@@ -122,16 +121,14 @@ class ProgressWidget {
 
     try {
       const message = await api.get(`/messages/${this.activeMessageId}/status`);
-
-      // Update UI
       this.renderProgress(message);
 
-      // Check completion
+      // Halt tracking if state is terminal
       if (message.status === "sent" || message.status === "failed") {
         this.complete(message);
       }
     } catch (e) {
-      console.error("Error fetching status", e);
+      console.error("[Progress] Status fetch error:", e.message);
     }
   }
 
@@ -140,12 +137,10 @@ class ProgressWidget {
     const total = message.total_count || 0;
     const groups = message.group_status || {};
 
-    // Sort groups by update time (recent first)
     const sortedGroups = Object.values(groups).sort((a, b) => {
       return new Date(b.updated_at) - new Date(a.updated_at);
     });
 
-    // Calc stats
     let success = 0;
     let failed = 0;
 
@@ -154,53 +149,54 @@ class ProgressWidget {
       if (g.status === "failed" || g.status === "skipped") failed++;
     });
 
-    // Update Header
-    document.getElementById("progress-count").textContent =
-      `${processed}/${total}`;
-    document.getElementById("progress-success").textContent = success;
-    document.getElementById("progress-failed").textContent = failed;
+    const countEl = document.getElementById("progress-count");
+    const successEl = document.getElementById("progress-success");
+    const failedEl = document.getElementById("progress-failed");
+    const fillEl = document.getElementById("progress-bar-fill");
+
+    if (countEl) countEl.textContent = `${processed}/${total}`;
+    if (successEl) successEl.textContent = success;
+    if (failedEl) failedEl.textContent = failed;
 
     const percent = total > 0 ? (processed / total) * 100 : 0;
-    document.getElementById("progress-bar-fill").style.width = `${percent}%`;
+    if (fillEl) fillEl.style.width = `${percent}%`;
 
-    // Logs
     const logContainer = document.getElementById("progress-log");
-    logContainer.innerHTML = sortedGroups
-      .map((g) => {
-        let icon = "⏳";
-        let statusClass = "pending";
-        if (g.status === "sent") {
-          icon = "✅";
-          statusClass = "success";
-        } else if (g.status === "failed") {
-          icon = "❌";
-          statusClass = "error";
-        } else if (g.status === "skipped") {
-          icon = "⏭️";
-          statusClass = "warning";
-        } else if (g.status === "sending") {
-          icon = "🚀";
-          statusClass = "active";
-        } else if (g.status === "waiting_delay") {
-          icon = "⏱️";
-          statusClass = "info";
-        }
+    if (logContainer) {
+      logContainer.innerHTML = sortedGroups
+        .map((g) => {
+          let icon = "⏳";
+          let statusClass = "pending";
+          if (g.status === "sent") {
+            icon = "✅";
+            statusClass = "success";
+          } else if (g.status === "failed") {
+            icon = "❌";
+            statusClass = "error";
+          } else if (g.status === "skipped") {
+            icon = "⏭️";
+            statusClass = "warning";
+          } else if (g.status === "sending") {
+            icon = "🚀";
+            statusClass = "active";
+          } else if (g.status === "waiting_delay") {
+            icon = "⏱️";
+            statusClass = "info";
+          }
 
-        // Show delay if waiting
-        let extraText = "";
-        if (g.status === "waiting_delay") {
-          extraText = " (Waiting safe delay...)";
-        }
+          let extraText =
+            g.status === "waiting_delay" ? " (Waiting safe delay...)" : "";
 
-        return `
+          return `
             <div class="log-item ${statusClass}">
                 <span class="log-icon">${icon}</span>
                 <span class="log-name">${g.group_name || "Unknown Group"}</span>
                 <span class="log-status">${g.status}${extraText}</span>
             </div>
-        `;
-      })
-      .join("");
+          `;
+        })
+        .join("");
+    }
   }
 
   complete(message) {
@@ -208,29 +204,26 @@ class ProgressWidget {
     this.checkInterval = null;
     this.activeMessageId = null;
 
-    // Show done state
-    const title = this.container.querySelector(".progress-title h3");
-    title.textContent = "Sending Complete";
-    this.container.querySelector(".spinner-sm").remove();
+    const title = this.container?.querySelector(".progress-title h3");
+    if (title) title.textContent = "Sending Complete";
 
-    // Auto hide after 5s
-    setTimeout(() => {
-      this.hide();
-    }, 8000);
+    const spinner = this.container?.querySelector(".spinner-sm");
+    if (spinner) spinner.remove();
+
+    // Keep visible for a few seconds so user sees final stats
+    setTimeout(() => this.hide(), 8000);
   }
 
   show() {
     if (this.container) {
       this.container.classList.remove("hidden");
-      // Also ensure the compose tab is visible if we want (optional)
-      // document.querySelector('[data-tab="compose"]').click();
     }
     this.isWidgetVisible = true;
   }
 
   hide() {
     if (this.container) {
-      this.container.innerHTML = ""; // Clear content to "hide"
+      this.container.classList.add("hidden");
     }
     this.isWidgetVisible = false;
   }

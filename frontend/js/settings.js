@@ -1,4 +1,4 @@
-import { api } from "./app.js";
+import { api } from "./api.js";
 import { showToast, confirmAction } from "./ui-components.js";
 import { loadGroups } from "./groups.js";
 import { loadMedia } from "./media.js";
@@ -16,14 +16,15 @@ export async function loadSettings() {
 }
 
 function renderSettings() {
-  document.getElementById("minDelay").value =
-    currentSettings.min_delay_seconds || 10;
-  document.getElementById("maxDelay").value =
-    currentSettings.max_delay_seconds || 30;
-  document.getElementById("dailyLimit").value =
-    currentSettings.daily_message_limit || 100;
-  document.getElementById("timezoneSelect").value =
-    currentSettings.timezone || "UTC";
+  const minDelay = document.getElementById("minDelay");
+  const maxDelay = document.getElementById("maxDelay");
+  const dailyLimit = document.getElementById("dailyLimit");
+  const timezoneSelect = document.getElementById("timezoneSelect");
+
+  if (minDelay) minDelay.value = currentSettings.min_delay_seconds || 10;
+  if (maxDelay) maxDelay.value = currentSettings.max_delay_seconds || 30;
+  if (dailyLimit) dailyLimit.value = currentSettings.daily_message_limit || 100;
+  if (timezoneSelect) timezoneSelect.value = currentSettings.timezone || "UTC";
 }
 
 export function setupSettings() {
@@ -33,17 +34,22 @@ export function setupSettings() {
   const maxDelayInput = document.getElementById("maxDelay");
   const dailyLimitInput = document.getElementById("dailyLimit");
 
+  if (!saveBtn) return;
+
   // Real-time validation
-  minDelayInput.addEventListener("input", () => validateDelays());
-  maxDelayInput.addEventListener("input", () => validateDelays());
-  dailyLimitInput.addEventListener("input", () => validateDailyLimit());
+  if (minDelayInput)
+    minDelayInput.addEventListener("input", () => validateDelays());
+  if (maxDelayInput)
+    maxDelayInput.addEventListener("input", () => validateDelays());
+  if (dailyLimitInput)
+    dailyLimitInput.addEventListener("input", () => validateDailyLimit());
 
   // Save settings
   saveBtn.addEventListener("click", async () => {
     const minDelay = parseInt(minDelayInput.value);
     const maxDelay = parseInt(maxDelayInput.value);
     const dailyLimit = parseInt(dailyLimitInput.value);
-    const timezone = document.getElementById("timezoneSelect").value;
+    const timezone = document.getElementById("timezoneSelect")?.value || "UTC";
 
     if (!validateAll(minDelay, maxDelay, dailyLimit)) {
       return;
@@ -71,34 +77,36 @@ export function setupSettings() {
   });
 
   // Reset to defaults
-  resetBtn.addEventListener("click", async () => {
-    const confirmed = await confirmAction(
-      "Reset all settings to default values?",
-      { title: "Reset Settings", confirmText: "Reset", type: "warning" },
-    );
-    if (!confirmed) return;
+  if (resetBtn) {
+    resetBtn.addEventListener("click", async () => {
+      const confirmed = await confirmAction(
+        "Reset all settings to default values?",
+        { title: "Reset Settings", confirmText: "Reset", type: "warning" },
+      );
+      if (!confirmed) return;
 
-    try {
-      resetBtn.disabled = true;
-      resetBtn.textContent = "🔄 Resetting...";
+      try {
+        resetBtn.disabled = true;
+        resetBtn.textContent = "🔄 Resetting...";
 
-      const defaults = {
-        min_delay_seconds: 10,
-        max_delay_seconds: 30,
-        daily_message_limit: 100,
-        timezone: "UTC",
-      };
+        const defaults = {
+          min_delay_seconds: 10,
+          max_delay_seconds: 30,
+          daily_message_limit: 100,
+          timezone: "UTC",
+        };
 
-      await api.put("/settings/", defaults);
-      await loadSettings();
-      showToast("Settings reset to defaults!", "success");
-    } catch (error) {
-      showToast("Failed to reset settings: " + error.message, "error");
-    } finally {
-      resetBtn.disabled = false;
-      resetBtn.textContent = "🔄 Reset to Defaults";
-    }
-  });
+        await api.put("/settings/", defaults);
+        await loadSettings();
+        showToast("Settings reset to defaults!", "success");
+      } catch (error) {
+        showToast("Failed to reset settings: " + error.message, "error");
+      } finally {
+        resetBtn.disabled = false;
+        resetBtn.textContent = "🔄 Reset to Defaults";
+      }
+    });
+  }
 
   // Setup clear data buttons
   setupClearDataButtons();
@@ -107,7 +115,6 @@ export function setupSettings() {
   const settingsLogoutBtn = document.getElementById("settingsLogoutBtn");
   if (settingsLogoutBtn) {
     settingsLogoutBtn.addEventListener("click", () => {
-      // Trigger the main logout button click
       const mainLogoutBtn = document.getElementById("logoutBtn");
       if (mainLogoutBtn) mainLogoutBtn.click();
     });
@@ -116,7 +123,6 @@ export function setupSettings() {
 
 function setupClearDataButtons() {
   const clearButtons = document.querySelectorAll("[data-clear]");
-
   clearButtons.forEach((button) => {
     button.addEventListener("click", async () => {
       const clearType = button.dataset.clear;
@@ -142,7 +148,6 @@ async function clearData(type) {
   );
   if (!confirmed) return;
 
-  // Second confirmation for extreme actions
   if (type === "all" || type === "everything") {
     const finalConfirm = await confirmAction(
       "⚠️⚠️⚠️ FINAL WARNING ⚠️⚠️⚠️\n\nAre you ABSOLUTELY SURE?",
@@ -160,8 +165,6 @@ async function clearData(type) {
     const result = await api.delete(`/admin/clear/${endpoint}`);
 
     showToast(result.message, "success");
-
-    // Reload appropriate sections or logout
     await reloadAfterClear(type);
   } catch (error) {
     showToast(`Failed to clear data: ${error.message}`, "error");
@@ -176,30 +179,27 @@ async function reloadAfterClear(type) {
     case "groups":
       await loadGroups();
       break;
-    case "messages":
-      // Just show success, no reload needed
-      break;
     case "scheduled":
       await loadScheduledJobs();
       break;
     case "all":
-      // Reload all data
       await loadGroups();
       await loadMedia();
       await loadScheduledJobs();
       break;
     case "everything":
-      // Logout and redirect
       window.location.reload();
       break;
   }
 }
 
 function validateDelays() {
-  const minDelay = parseInt(document.getElementById("minDelay").value);
-  const maxDelay = parseInt(document.getElementById("maxDelay").value);
   const minDelayInput = document.getElementById("minDelay");
   const maxDelayInput = document.getElementById("maxDelay");
+  if (!minDelayInput || !maxDelayInput) return false;
+
+  const minDelay = parseInt(minDelayInput.value);
+  const maxDelay = parseInt(maxDelayInput.value);
 
   minDelayInput.style.borderColor = "";
   maxDelayInput.style.borderColor = "";
@@ -208,32 +208,29 @@ function validateDelays() {
     minDelayInput.style.borderColor = "var(--error)";
     return false;
   }
-
   if (maxDelay > 300) {
     maxDelayInput.style.borderColor = "var(--error)";
     return false;
   }
-
   if (minDelay >= maxDelay) {
     minDelayInput.style.borderColor = "var(--error)";
     maxDelayInput.style.borderColor = "var(--error)";
     return false;
   }
-
   return true;
 }
 
 function validateDailyLimit() {
-  const dailyLimit = parseInt(document.getElementById("dailyLimit").value);
   const dailyLimitInput = document.getElementById("dailyLimit");
+  if (!dailyLimitInput) return false;
 
+  const dailyLimit = parseInt(dailyLimitInput.value);
   dailyLimitInput.style.borderColor = "";
 
   if (dailyLimit < 1 || dailyLimit > 1000) {
     dailyLimitInput.style.borderColor = "var(--error)";
     return false;
   }
-
   return true;
 }
 
@@ -242,26 +239,21 @@ function validateAll(minDelay, maxDelay, dailyLimit) {
     showToast("Minimum delay must be at least 5 seconds", "error");
     return false;
   }
-
   if (maxDelay > 300) {
     showToast("Maximum delay cannot exceed 300 seconds (5 minutes)", "error");
     return false;
   }
-
   if (minDelay >= maxDelay) {
     showToast("Minimum delay must be less than maximum delay", "error");
     return false;
   }
-
   if (dailyLimit < 1) {
     showToast("Daily limit must be at least 1", "error");
     return false;
   }
-
   if (dailyLimit > 1000) {
     showToast("Daily limit cannot exceed 1000 messages", "error");
     return false;
   }
-
   return true;
 }

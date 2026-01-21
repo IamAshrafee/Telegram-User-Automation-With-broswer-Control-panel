@@ -1,4 +1,4 @@
-import { api } from "./app.js";
+import { api } from "./api.js";
 
 let rateLimitInterval = null;
 
@@ -38,11 +38,16 @@ function renderRateLimitWidget(status) {
   // Format reset time
   const resetDate = new Date(status.reset_at);
   const now = new Date();
-  const hoursUntilReset = Math.floor((resetDate - now) / (1000 * 60 * 60));
-  const minutesUntilReset = Math.floor(
-    ((resetDate - now) % (1000 * 60 * 60)) / (1000 * 60),
-  );
-  const resetText = `${hoursUntilReset}h ${minutesUntilReset}m`;
+  const diffMs = resetDate - now;
+
+  let resetText = "Soon";
+  if (diffMs > 0) {
+    const hoursUntilReset = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutesUntilReset = Math.floor(
+      (diffMs % (1000 * 60 * 60)) / (1000 * 60),
+    );
+    resetText = `${hoursUntilReset}h ${minutesUntilReset}m`;
+  }
 
   widget.innerHTML = `
     <div class="rate-limit-widget">

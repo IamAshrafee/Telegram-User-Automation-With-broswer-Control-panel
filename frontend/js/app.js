@@ -1,136 +1,9 @@
-// API Configuration
-// Support hosting under a subpath (e.g. /sys-admin-panel/)
-export const API_BASE = (() => {
-  const path = window.location.pathname;
-  let base = "";
-  if (path.includes(".html")) {
-    base = path.substring(0, path.lastIndexOf("/"));
-  } else {
-    base = path;
-  }
-  // Remove all trailing slashes and return origin + base
-  return window.location.origin + base.replace(/\/+$/, "");
-})();
+/**
+ * Main App Orchestrator
+ * This is the entry point for the frontend application.
+ */
 
-// API Client
-class APIClient {
-  async handleResponse(response, options = {}) {
-    let errorData = {};
-    const isJson = response.headers
-      .get("content-type")
-      ?.includes("application/json");
-
-    if (!response.ok) {
-      if (isJson) {
-        try {
-          errorData = await response.json();
-        } catch (e) {}
-      }
-
-      const errorMessage = errorData.detail || response.statusText;
-      const error = new Error(
-        typeof errorMessage === "string"
-          ? errorMessage
-          : JSON.stringify(errorMessage),
-      );
-      error.status = response.status;
-      error.data = errorData;
-
-      if (!options.silent) {
-        console.error("API Error:", error);
-      }
-      throw error;
-    }
-
-    return isJson ? await response.json() : await response.text();
-  }
-
-  async request(endpoint, options = {}) {
-    try {
-      // Ensure endpoint starts with /
-      const url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-
-      const response = await fetch(`${API_BASE}${url}`, {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          ...options.headers,
-        },
-      });
-
-      return await this.handleResponse(response, options);
-    } catch (error) {
-      if (!options.silent) {
-        console.error("Request failed:", error);
-      }
-      throw error;
-    }
-  }
-
-  async get(endpoint, options = {}) {
-    return this.request(endpoint, { ...options, method: "GET" });
-  }
-
-  async post(endpoint, data, options = {}) {
-    return this.request(endpoint, {
-      ...options,
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  }
-
-  async patch(endpoint, data, options = {}) {
-    return this.request(endpoint, {
-      ...options,
-      method: "PATCH",
-      body: JSON.stringify(data),
-    });
-  }
-
-  async put(endpoint, data, options = {}) {
-    return this.request(endpoint, {
-      ...options,
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-  }
-
-  async delete(endpoint, options = {}) {
-    return this.request(endpoint, { ...options, method: "DELETE" });
-  }
-
-  async uploadMultipleFiles(endpoint, files, options = {}) {
-    const formData = new FormData();
-    files.forEach((file) => {
-      formData.append("files", file);
-    });
-
-    const url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-    const response = await fetch(`${API_BASE}${url}`, {
-      method: "POST",
-      body: formData,
-    });
-
-    return await this.handleResponse(response, options);
-  }
-
-  async uploadFile(endpoint, file, options = {}) {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-    const response = await fetch(`${API_BASE}${url}`, {
-      method: "POST",
-      body: formData,
-    });
-
-    return await this.handleResponse(response, options);
-  }
-}
-
-export const api = new APIClient();
-
-// Navigation
+// Basic Navigation Setup
 export function setupNavigation() {
   const navItems = document.querySelectorAll(".nav-item");
   const sections = document.querySelectorAll(".content-section");
@@ -140,69 +13,117 @@ export function setupNavigation() {
       e.preventDefault();
       const targetSection = item.dataset.section;
 
-      // Update active nav item
       navItems.forEach((nav) => nav.classList.remove("active"));
       item.classList.add("active");
 
-      // Show target section
-      sections.forEach((section) => section.classList.remove("active"));
-      document.getElementById(targetSection).classList.add("active");
+      sections.forEach((section) => {
+        section.classList.remove("active");
+        const target = document.getElementById(targetSection);
+        if (target) target.classList.add("active");
+      });
     });
   });
 }
 
-// Format file size
-export function formatFileSize(bytes) {
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+// App Initialization Logic
+const initApp = async () => {
+  console.log("[Stealth Mode] Booting Main Orchestrator...");
+
+  try {
+    // Dynamic imports to prevent circular dependencies and syntax-blocking
+    const [
+      { setupAuth, checkAuthStatus },
+      { setupGroups, loadGroups, renderGroupSelectors },
+      { setupMedia, loadMedia, setupImageSelector },
+      { setupMessages, loadScheduledJobs },
+      { setupSettings, loadSettings },
+      { setupTemplates },
+      { setupTabs },
+      { progressWidget },
+    ] = await Promise.all([
+      import("./auth.js"),
+      import("./groups.js"),
+      import("./media.js"),
+      import("./messages.js"),
+      import("./settings.js"),
+      import("./templates.js"),
+      import("./ui-components.js"),
+      import("./progress-widget.js"),
+    ]);
+
+    // Safe Module Initialization
+    const initModule = (name, initFn) => {
+      try {
+        if (typeof initFn === "function") initFn();
+      } catch (e) {
+        console.error(`[Boot Error] ${name} module failed:`, e);
+      }
+    };
+
+    // 1. Setup Event Listeners
+    window.addEventListener("authenticated", async () => {
+      console.log("[Stealth Mode] Authenticated! Loading modules...");
+      try {
+        await Promise.all([
+          loadGroups(),
+          loadMedia(),
+          loadScheduledJobs(),
+          loadSettings(),
+        ]);
+        if (typeof renderGroupSelectors === "function") renderGroupSelectors();
+
+        // Start rate limit monitoring
+        import("./rate-limit.js").then((module) => {
+          if (module.startRateLimitMonitoring)
+            module.startRateLimitMonitoring();
+        });
+      } catch (e) {
+        console.warn("[Data Error] Post-auth background load failed:", e);
+      }
+    });
+
+    // 2. Component Setup
+    initModule("Navigation", setupNavigation);
+    initModule("Auth", setupAuth);
+    initModule("Groups", setupGroups);
+    initModule("Media", () => {
+      setupMedia();
+      setupImageSelector();
+    });
+    initModule("Messages", setupMessages);
+    initModule("Settings", setupSettings);
+    initModule("Templates", setupTemplates);
+    initModule("Tabs", setupTabs);
+    initModule("Progress", () => progressWidget.init());
+
+    // 3. Final Auth Handshake
+    console.log("[Stealth Mode] Checking login status...");
+    await checkAuthStatus();
+
+    // 4. Hide boot indicator
+    const bootStatus = document.getElementById("bootStatus");
+    if (bootStatus) bootStatus.style.display = "none";
+  } catch (err) {
+    console.error(
+      "[Stealth Mode] SYSTEM HALTED: Critical initialization error:",
+      err,
+    );
+
+    // On-screen emergency diagnostic for the user
+    const alertBar = document.createElement("div");
+    alertBar.style =
+      "position:fixed; top:0; left:0; width:100%; background:#8b0000; color:#fff; padding:15px; z-index:99999; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,0.5); font-family:sans-serif;";
+    alertBar.innerHTML = `
+      <div style="font-weight:bold; margin-bottom:5px;">⚠️ System Critical Error</div>
+      <div style="font-size:0.85em; opacity:0.9;">Failed to load application scripts. Please verify your Nginx proxy handles subpaths correctly and press <strong>Ctrl+F5</strong>.</div>
+    `;
+    document.body.prepend(alertBar);
+  }
+};
+
+// Start the boot sequence
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initApp);
+} else {
+  initApp();
 }
-
-// Format date
-export function formatDate(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleString();
-}
-
-// Import modules
-import { checkAuthStatus, setupAuth } from "./auth.js";
-import { setupGroups, loadGroups, renderGroupSelectors } from "./groups.js";
-import { setupMedia, loadMedia } from "./media.js";
-import { setupMessages, loadScheduledJobs } from "./messages.js";
-import { setupSettings, loadSettings } from "./settings.js";
-import { setupTemplates } from "./templates.js";
-import { setupTabs } from "./ui-components.js";
-import { progressWidget } from "./progress-widget.js";
-
-// Initialize app
-document.addEventListener("DOMContentLoaded", async () => {
-  // Setup modules
-  setupNavigation();
-  setupAuth();
-  setupGroups();
-  setupMedia();
-  setupMessages();
-  setupSettings();
-  setupTemplates();
-  setupTabs();
-
-  // Init progress widget (checks for active jobs)
-  progressWidget.init();
-
-  // Start rate limit monitoring
-  import("./rate-limit.js").then((module) => {
-    module.startRateLimitMonitoring();
-  });
-
-  // Load data when authenticated
-  window.addEventListener("authenticated", async () => {
-    await loadGroups();
-    await loadMedia();
-    await loadScheduledJobs();
-    await loadSettings();
-    renderGroupSelectors();
-  });
-
-  // Check authentication status
-  await checkAuthStatus();
-});
