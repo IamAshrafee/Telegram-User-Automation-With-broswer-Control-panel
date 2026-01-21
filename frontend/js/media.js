@@ -229,47 +229,67 @@ async function deleteMedia(mediaId) {
   }
 }
 
-async function uploadFiles(files) {
+async function uploadFiles(filesList) {
   const uploadContent = document.querySelector(".upload-content");
   const originalContent = uploadContent.innerHTML;
+  const files = Array.from(filesList);
+  const totalFiles = files.length;
 
   try {
-    uploadContent.innerHTML = `<div class="spinner"></div><p>Uploading...</p>`;
+    let uploadedCount = 0;
+    let failedCount = 0;
 
-    // Step 1: Upload with check
-    const response = await api.uploadMultipleFiles(
-      "/media/upload?action=check",
-      Array.from(files),
-    );
+    // Process in batches of 5 for stability
+    const BATCH_SIZE = 5;
 
-    // Step 2: Handle results
-    if (response.uploaded && response.uploaded.length > 0) {
-      showToast(`Uploaded ${response.uploaded.length} files`, "success");
-    }
+    for (let i = 0; i < files.length; i += BATCH_SIZE) {
+      const batch = files.slice(i, i + BATCH_SIZE);
+      const progress = Math.round(((i + batch.length) / totalFiles) * 100);
 
-    if (response.failed && response.failed.length > 0) {
-      response.failed.forEach((f) =>
-        showToast(`Failed ${f.filename}: ${f.reason}`, "error"),
-      );
-    }
+      uploadContent.innerHTML = `
+        <div class="spinner"></div>
+        <p>Uploading ${i + 1}-${Math.min(i + BATCH_SIZE, totalFiles)} of ${totalFiles}...</p>
+        <div style="width: 100%; background: var(--bg-hover); border-radius: 10px; height: 8px; margin-top: 10px; overflow: hidden;">
+          <div style="width: ${progress}%; background: var(--color-primary); height: 100%; transition: width 0.3s"></div>
+        </div>
+      `;
 
-    // Step 3: Handle duplicates
-    if (response.duplicates && response.duplicates.length > 0) {
-      for (const dup of response.duplicates) {
-        // Find original file object
-        const originalFile = Array.from(files).find(
-          (f) => f.name === dup.filename,
+      try {
+        const response = await api.uploadMultipleFiles(
+          "/media/upload?action=check",
+          batch,
         );
-        if (originalFile) {
-          await handleDuplicate(originalFile, dup);
+
+        if (response.uploaded) uploadedCount += response.uploaded.length;
+        if (response.failed) failedCount += response.failed.length;
+
+        // Handle duplicates sequentially for each batch if needed
+        if (response.duplicates && response.duplicates.length > 0) {
+          for (const dup of response.duplicates) {
+            const originalFile = batch.find((f) => f.name === dup.filename);
+            if (originalFile) {
+              await handleDuplicate(originalFile, dup);
+            }
+          }
         }
+      } catch (e) {
+        console.error("Batch upload failed:", e);
+        failedCount += batch.length;
+        showToast(`Batch ending at ${i + batch.length} failed.`, "error");
       }
     }
 
-    // Reload from page 1 to confirm everything
+    if (uploadedCount > 0) {
+      showToast(`Successfully uploaded ${uploadedCount} files!`, "success");
+    }
+    if (failedCount > 0) {
+      showToast(`${failedCount} files failed to upload.`, "error");
+    }
+
+    // Reload from page 1 to show newest first
     await loadMedia(1);
   } catch (error) {
-    showToast(error.message, "error");
+    showToast("Upload process interrupted: " + error.message, "error");
   } finally {
     uploadContent.innerHTML = originalContent;
   }
