@@ -321,3 +321,152 @@
     align-items: center;
   }
 }
+
+/* -----------------------------
+   Progress Widget
+----------------------------- */
+.progress-widget {
+  background: white;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  margin-top: var(--space-4);
+}
+
+/* When floating (if not embedded) */
+body > .progress-widget {
+  position: fixed;
+  bottom: 24px;
+  left: 24px; /* Floating Bottom-Left */
+  z-index: var(--z-fixed);
+  width: 320px;
+  margin-top: 0;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--slate-50);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.progress-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.progress-title h3 {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  margin: 0;
+}
+
+.progress-controls .btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  padding: 4px;
+  color: var(--color-text-secondary);
+}
+
+.progress-body {
+  padding: var(--space-4);
+}
+
+.progress-body.hidden {
+  display: none;
+}
+
+.progress-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-item .label {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.stat-item .value {
+  font-weight: var(--font-bold);
+}
+
+.stat-item .value.success {
+  color: var(--color-success);
+}
+.stat-item .value.error {
+  color: var(--color-danger);
+}
+
+.progress-bar-wrapper {
+  height: 6px;
+  background: var(--slate-100);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: var(--space-3);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width 0.3s ease;
+}
+
+.progress-log {
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: 0.8rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-2);
+}
+
+.log-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--slate-50);
+}
+
+.log-item.success .log-status {
+  color: var(--color-success);
+}
+.log-item.error .log-status {
+  color: var(--color-danger);
+}
+.log-item.warning .log-status {
+  color: var(--color-warning);
+}
+.log-item.active .log-status {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.log-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: var(--font-medium);
+}
+
+.log-status {
+  font-size: 0.75rem;
+  margin-left: auto;
+}
