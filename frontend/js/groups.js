@@ -96,6 +96,8 @@ export async function loadGroups() {
     allGroups = await api.get("/groups/");
     renderGroups(allGroups);
     updateDashboardStats(allGroups);
+    // Also update the selectors in the composer tab
+    renderGroupSelectors();
   } catch (error) {
     console.error("Failed to load groups:", error);
     showToast("Failed to load groups library", "error");

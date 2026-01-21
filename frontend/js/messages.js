@@ -1,6 +1,9 @@
 import { api } from "./api.js";
-import { showToast } from "./ui-components.js";
+import { showToast, confirmAction } from "./ui-components.js";
 import { formatDate } from "./utils.js";
+
+let messageHistory = [];
+let filteredHistory = [];
 
 export function setupMessages() {
   const sendMessageBtn = document.getElementById("sendMessageBtn");
@@ -35,6 +38,10 @@ export function setupMessages() {
   if (refreshScheduledBtn)
     refreshScheduledBtn.addEventListener("click", loadScheduledJobs);
 
+  // Setup History Listeners
+  setupHistoryListeners();
+
+  // Initial load
   loadHistory();
 }
 
@@ -105,6 +112,11 @@ async function handleSendMessage() {
       document.getElementById("messageMedia").value = "";
       const preview = document.getElementById("messageMediaPreview");
       if (preview) preview.style.display = "none";
+
+      const selectBtn = document.getElementById("selectMessageMedia");
+      if (selectBtn) selectBtn.textContent = "🖼️ Select Image";
+      const clearBtn = document.getElementById("clearMessageMedia");
+      if (clearBtn) clearBtn.style.display = "none";
     }
 
     if (isScheduled) await loadScheduledJobs();
@@ -119,6 +131,8 @@ async function handleSendMessage() {
       : "🚀 Send Message Now";
   }
 }
+
+// --- Scheduled Jobs ---
 
 export async function loadScheduledJobs() {
   try {
@@ -177,41 +191,154 @@ window.cancelJob = async (id) => {
   }
 };
 
+// --- Message History ---
+
 async function loadHistory() {
   try {
-    const history = await api.get("/messages/history");
-    renderHistory(history);
+    messageHistory = await api.get("/messages/history?limit=100");
+    filteredHistory = [...messageHistory];
+    renderHistory();
   } catch (error) {
     console.error("Failed to load history:", error);
+    const list = document.getElementById("historyList");
+    if (list)
+      list.innerHTML =
+        '<div class="empty-state"><p>Failed to load history</p></div>';
   }
 }
 
-function renderHistory(history) {
+function renderHistory() {
   const list = document.getElementById("historyList");
   if (!list) return;
 
-  if (history.length === 0) {
-    list.innerHTML = '<div class="empty-state"><p>No message history</p></div>';
+  if (filteredHistory.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📜</div>
+        <p class="empty-state-text">No message history</p>
+        <p class="empty-state-subtext">Your sent messages will appear here.</p>
+      </div>`;
     return;
   }
 
-  list.innerHTML = history
+  list.innerHTML = filteredHistory
     .map(
-      (item) => `
-    <div class="history-item ${item.status}">
+      (msg) => `
+    <div class="history-item ${msg.status.toLowerCase()}">
         <div class="history-main">
-            <p class="history-text">${item.text.substring(0, 150)}${item.text.length > 150 ? "..." : ""}</p>
+            <p class="history-text" title="${msg.text || "(Media Message)"}">
+              ${msg.text ? msg.text.substring(0, 150) + (msg.text.length > 150 ? "..." : "") : "(Media Message)"}
+            </p>
             <div class="history-meta">
-                <span>${formatDate(item.created_at)}</span>
-                <span>Group: ${item.group_title}</span>
+                <span>📅 ${formatDate(msg.created_at)}</span>
+                <span>•</span>
+                <span>👥 ${msg.group_count || 1} groups</span>
+                ${msg.link ? "<span>•</span><span>🔗 Has link</span>" : ""}
+                ${msg.media_id ? "<span>•</span><span>🖼️ Has media</span>" : ""}
             </div>
         </div>
         <div class="history-status">
-            <span class="status-badge ${item.status}">${item.status}</span>
-            ${item.error_message ? `<p class="error-text">${item.error_message}</p>` : ""}
+            <span class="status-badge ${msg.status.toLowerCase()}">${msg.status}</span>
+            ${
+              msg.status.toLowerCase() === "failed"
+                ? `<button class="btn btn-outline-primary btn-sm mt-1" onclick="retryMessage(${msg.id})">🔄 Retry</button>`
+                : ""
+            }
+            ${msg.error_message ? `<p class="error-text">${msg.error_message}</p>` : ""}
         </div>
     </div>
   `,
     )
     .join("");
 }
+
+function filterHistory() {
+  const searchTerm = document
+    .getElementById("historySearch")
+    ?.value.toLowerCase();
+  const statusFilter = document.getElementById("historyFilter")?.value;
+
+  filteredHistory = messageHistory.filter((msg) => {
+    const text = msg.text || "";
+    const matchesSearch =
+      !searchTerm || text.toLowerCase().includes(searchTerm);
+    const matchesStatus =
+      !statusFilter ||
+      statusFilter === "all" ||
+      msg.status.toLowerCase() === statusFilter.toLowerCase();
+    return matchesSearch && matchesStatus;
+  });
+
+  renderHistory();
+}
+
+function setupHistoryListeners() {
+  const historyTabBtn = document.querySelector('.tab-btn[data-tab="history"]');
+  if (historyTabBtn) {
+    historyTabBtn.addEventListener("click", () => loadHistory());
+  }
+
+  const searchInput = document.getElementById("historySearch");
+  if (searchInput) searchInput.addEventListener("input", filterHistory);
+
+  const filterSelect = document.getElementById("historyFilter");
+  if (filterSelect) filterSelect.addEventListener("change", filterHistory);
+
+  const exportBtn = document.getElementById("exportHistoryBtn");
+  if (exportBtn) exportBtn.addEventListener("click", exportToCSV);
+}
+
+function exportToCSV() {
+  if (filteredHistory.length === 0) {
+    showToast("No messages to export", "warning");
+    return;
+  }
+
+  const headers = ["Date", "Status", "Text", "Link", "Groups", "Has Media"];
+  const rows = filteredHistory.map((msg) => [
+    formatDate(msg.created_at),
+    msg.status,
+    `"${(msg.text || "").replace(/"/g, '""')}"`,
+    msg.link || "",
+    msg.group_count || 1,
+    msg.media_id ? "Yes" : "No",
+  ]);
+
+  const csv = [headers.join(","), ...rows.map((row) => row.join(","))].join(
+    "\n",
+  );
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.id = "csv-download-link";
+  a.href = url;
+  a.download = `message-history-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("History exported successfully", "success");
+}
+
+window.retryMessage = async (messageId) => {
+  const confirmed = await confirmAction(
+    "Retry sending this message to groups?",
+    { title: "Retry Message", confirmText: "Retry" },
+  );
+  if (!confirmed) return;
+
+  try {
+    const message = messageHistory.find((m) => m.id === messageId);
+    if (!message) throw new Error("Message not found");
+
+    await api.post("/messages/send", {
+      text: message.text,
+      link: message.link,
+      media_id: message.media_id,
+      group_ids: message.target_groups || [],
+    });
+
+    showToast("Retry started!", "success");
+    await loadHistory();
+  } catch (error) {
+    showToast("Failed to retry: " + error.message, "error");
+  }
+};
