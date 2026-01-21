@@ -194,9 +194,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     module.startRateLimitMonitoring();
   });
 
-  // Check authentication status
-  await checkAuthStatus();
-
   // Load data when authenticated
   window.addEventListener("authenticated", async () => {
     await loadGroups();
@@ -205,4 +202,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadSettings();
     renderGroupSelectors();
   });
+
+  // Check authentication status
+  await checkAuthStatus();
 });
