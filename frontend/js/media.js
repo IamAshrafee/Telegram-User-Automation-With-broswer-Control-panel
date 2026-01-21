@@ -2,10 +2,18 @@ import { api, API_BASE } from "./api.js";
 import { showToast } from "./ui-components.js";
 import { formatFileSize } from "./utils.js";
 
+let allMedia = [];
+let displayMedia = []; // For filtering/searching
+let currentPage = 1;
+let totalPages = 1;
+let isPageLoading = false;
+const pageSize = 20;
+
 export function setupMedia() {
   const fileInput = document.getElementById("fileInput");
   const selectFileBtn = document.getElementById("selectFileBtn");
   const uploadArea = document.getElementById("uploadArea");
+  const mediaSearch = document.getElementById("mediaSearch");
 
   if (selectFileBtn && fileInput) {
     selectFileBtn.addEventListener("click", () => fileInput.click());
@@ -26,25 +34,134 @@ export function setupMedia() {
       handleFiles(e.dataTransfer.files);
     });
   }
+
+  if (mediaSearch) {
+    mediaSearch.addEventListener("input", (e) => {
+      handleSearch(e.target.value);
+    });
+  }
+
+  setupDuplicateModal();
 }
 
-async function handleFiles(files) {
-  if (!files.length) return;
-  await uploadFiles(Array.from(files));
-}
+/**
+ * Loading & Paging (Load More Pattern)
+ */
+export async function loadMedia(page = 1, append = false) {
+  if (isPageLoading) return;
+  isPageLoading = true;
 
-let allMedia = [];
-
-export async function loadMedia() {
   try {
-    const media = await api.get("/media/");
-    allMedia = Array.isArray(media) ? media : media.items || [];
-    renderMedia(allMedia);
-    updateDashboardStats(allMedia.length);
+    const response = await api.get(`/media/?page=${page}&limit=${pageSize}`);
+    const items = response.items || [];
+    currentPage = response.page;
+    totalPages = response.pages;
+
+    if (append) {
+      allMedia = [...allMedia, ...items];
+    } else {
+      allMedia = items;
+    }
+
+    displayMedia = [...allMedia];
+    const query = document.getElementById("mediaSearch")?.value || "";
+    if (query) {
+      displayMedia = allMedia.filter((item) =>
+        item.filename.toLowerCase().includes(query.toLowerCase().trim()),
+      );
+    }
+
+    renderMedia(displayMedia);
+    renderLoadMore();
+    updateDashboardStats(response.total);
   } catch (error) {
     console.error("Failed to load media:", error);
     showToast("Failed to load media library", "error");
+  } finally {
+    isPageLoading = false;
   }
+}
+
+function renderLoadMore() {
+  const container = document.getElementById("mediaLoadMore");
+  if (!container) return;
+
+  if (currentPage >= totalPages || totalPages <= 1) {
+    container.innerHTML = "";
+    return;
+  }
+
+  container.innerHTML = `
+    <button id="loadMoreBtn" class="btn btn-secondary shadow-sm">
+      <span class="btn-text">Load More Media</span>
+      <div class="spinner-sm hidden" style="margin-left: 8px;"></div>
+    </button>
+  `;
+
+  const btn = document.getElementById("loadMoreBtn");
+  const spinner = btn?.querySelector(".spinner-sm");
+
+  btn.onclick = async () => {
+    btn.disabled = true;
+    spinner?.classList.remove("hidden");
+    await loadMedia(currentPage + 1, true);
+    // Spinner/disabled state handled by re-render
+  };
+}
+
+/**
+ * Search Logic
+ */
+function handleSearch(query) {
+  const q = query.toLowerCase().trim();
+  if (!q) {
+    displayMedia = [...allMedia];
+  } else {
+    displayMedia = allMedia.filter((item) =>
+      item.filename.toLowerCase().includes(q),
+    );
+  }
+  renderMedia(displayMedia);
+}
+
+/**
+ * Rendering
+ */
+function renderMedia(media) {
+  const gallery = document.getElementById("mediaGallery");
+  if (!gallery) return;
+
+  if (media.length === 0) {
+    gallery.innerHTML = `
+      <div class="empty-state" style="grid-column: 1/-1; padding: 4rem; text-align: center;">
+        <div style="font-size: 3.5rem; margin-bottom: 1.5rem; opacity: 0.5;">🖼️</div>
+        <h3 style="font-weight: 600; color: var(--slate-700);">No results found</h3>
+        <p class="text-muted">Try a different search or upload new files.</p>
+      </div>
+    `;
+    return;
+  }
+
+  gallery.innerHTML = media
+    .map(
+      (item) => `
+    <div class="media-card" data-id="${item.id}" style="animation-delay: ${Math.random() * 0.2}s">
+        <div class="media-card-img-wrapper" style="aspect-ratio: 16/10;">
+            <img src="${API_BASE}${item.url}" alt="${item.filename}" loading="lazy">
+            <div class="media-card-overlay">
+                <button class="btn btn-danger btn-sm shadow-lg" onclick="deleteMedia(${item.id})">
+                  🗑️ Delete
+                </button>
+            </div>
+        </div>
+        <div class="media-info">
+            <div class="media-name" title="${item.filename}">${item.filename}</div>
+            <div class="media-meta">${formatFileSize(item.file_size)} • ${item.mime_type.split("/")[1].toUpperCase()}</div>
+        </div>
+    </div>
+  `,
+    )
+    .join("");
 }
 
 function updateDashboardStats(count) {
@@ -54,61 +171,114 @@ function updateDashboardStats(count) {
   if (totalMediaCount) totalMediaCount.textContent = count;
 }
 
-function renderMedia(media) {
-  const gallery = document.getElementById("mediaGallery");
-  if (!gallery) return;
-
-  if (media.length === 0) {
-    gallery.innerHTML =
-      '<div class="empty-state" style="grid-column: 1/-1"><p>No media files uploaded yet.</p></div>';
-    return;
-  }
-
-  gallery.innerHTML = media
-    .map(
-      (item) => `
-    <div class="media-card">
-        <div class="media-preview">
-            <img src="${API_BASE}${item.url}" alt="${item.filename}" loading="lazy">
-            <div class="media-overlay">
-                <button class="btn-icon delete" onclick="deleteMedia(${item.id})" title="Delete">🗑️</button>
-            </div>
-        </div>
-        <div class="media-info">
-            <span class="media-name" title="${item.filename}">${item.filename}</span>
-            <span class="media-meta">${formatFileSize(item.file_size)}</span>
-        </div>
-    </div>
-  `,
-    )
-    .join("");
-}
-
 window.deleteMedia = async (id) => {
   if (!confirm("Are you sure you want to delete this media?")) return;
   try {
     await api.delete(`/media/${id}`);
-    showToast("Media deleted", "success");
-    await loadMedia();
+    showToast("Media deleted successfully", "success");
+    // Reload from start to maintain consistency
+    await loadMedia(1);
   } catch (error) {
     showToast(error.message, "error");
   }
 };
 
-async function uploadFiles(files) {
+/**
+ * Duplicate Detection
+ */
+let pendingFiles = [];
+
+async function handleFiles(files) {
+  if (!files.length) return;
+  await uploadFiles(Array.from(files));
+}
+
+async function uploadFiles(files, action = "check") {
   try {
-    showToast(`Uploading ${files.length} files...`, "info");
-    await api.uploadMultipleFiles("/media/upload", files);
-    showToast("Upload complete!", "success");
-    await loadMedia();
+    const response = await api.uploadMultipleFiles(
+      `/media/upload?action=${action}`,
+      files,
+    );
+
+    if (response.duplicates && response.duplicates.length > 0) {
+      handleDuplicates(response.duplicates, files);
+    } else {
+      showToast(
+        `Successfully uploaded ${response.uploaded.length} files`,
+        "success",
+      );
+      await loadMedia(1);
+    }
   } catch (error) {
     showToast(error.message, "error");
   }
 }
 
+function handleDuplicates(duplicates, originalFiles) {
+  const duplicateMap = new Map();
+  duplicates.forEach((d) => duplicateMap.set(d.filename, d));
+
+  pendingFiles = originalFiles
+    .filter((f) => duplicateMap.has(f.name))
+    .map((f) => ({ file: f, info: duplicateMap.get(f.name) }));
+
+  if (pendingFiles.length > 0) {
+    showNextDuplicate();
+  }
+}
+
+function setupDuplicateModal() {
+  const modal = document.getElementById("duplicateModal");
+  const replaceBtn = document.getElementById("replaceDuplicateBtn");
+  const keepBtn = document.getElementById("keepBothBtn");
+  const cancelBtn = document.getElementById("cancelUploadBtn");
+
+  if (!modal) return;
+  modal.style.pointerEvents = "none";
+
+  replaceBtn.onclick = async () => {
+    const { file } = pendingFiles.shift();
+    await uploadFiles([file], "replace");
+    showNextDuplicate();
+  };
+
+  keepBtn.onclick = async () => {
+    const { file } = pendingFiles.shift();
+    await uploadFiles([file], "keep");
+    showNextDuplicate();
+  };
+
+  cancelBtn.onclick = () => {
+    pendingFiles.shift();
+    showNextDuplicate();
+  };
+}
+
+function showNextDuplicate() {
+  const modal = document.getElementById("duplicateModal");
+  if (pendingFiles.length === 0) {
+    if (modal) {
+      modal.classList.remove("show");
+      modal.style.pointerEvents = "none";
+    }
+    loadMedia(1);
+    return;
+  }
+
+  const { file } = pendingFiles[0];
+  const nameEl = document.getElementById("duplicateFileName");
+  const imgEl = document.getElementById("duplicatePreviewImg");
+
+  if (modal) {
+    nameEl.textContent = file.name;
+    imgEl.src = URL.createObjectURL(file);
+    modal.classList.add("show");
+    modal.style.pointerEvents = "all";
+  }
+}
+
 /**
- * Image Selector Modal Logic
- * Used by the composer to choose images from the library
+ * Image Selector Logic (Composer)
  */
 export function setupImageSelector() {
   const selectBtn = document.getElementById("selectMessageMedia");
@@ -130,7 +300,6 @@ export function setupImageSelector() {
   if (closeBtn)
     closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
 
-  // Close on outside click
   modal.addEventListener("click", (e) => {
     if (e.target === modal) modal.classList.add("hidden");
   });
@@ -146,24 +315,32 @@ export function setupImageSelector() {
 
   function renderSelectorGallery() {
     if (!gallery) return;
+
     if (allMedia.length === 0) {
       gallery.innerHTML =
         '<p class="text-center p-8 text-muted">No media found. Upload some in the Media Library first!</p>';
       return;
     }
 
-    gallery.innerHTML = allMedia
-      .map(
-        (item) => `
-      <div class="selector-item" data-id="${item.id}" data-url="${item.url}">
-        <img src="${API_BASE}${item.url}" alt="${item.filename}">
-        <div class="selector-overlay">Select</div>
+    gallery.innerHTML = `
+      <div class="image-selector-grid">
+        ${allMedia
+          .map(
+            (item) => `
+          <div class="image-selector-item" data-id="${item.id}" data-url="${item.url}">
+            <div class="img-wrapper">
+              <img src="${API_BASE}${item.url}" alt="${item.filename}">
+            </div>
+            <div class="check-badge">✓</div>
+            <div class="image-selector-name">${item.filename}</div>
+          </div>
+        `,
+          )
+          .join("")}
       </div>
-    `,
-      )
-      .join("");
+    `;
 
-    gallery.querySelectorAll(".selector-item").forEach((item) => {
+    gallery.querySelectorAll(".image-selector-item").forEach((item) => {
       item.addEventListener("click", () => {
         const id = item.dataset.id;
         const url = item.dataset.url;
