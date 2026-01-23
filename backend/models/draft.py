@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, String, DateTime, JSON
+from sqlalchemy import Column, Integer, Text, String, DateTime, JSON, ForeignKey
 from datetime import datetime
 from backend.database import Base
 
@@ -8,6 +8,7 @@ class MessageDraft(Base):
     __tablename__ = "message_drafts"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     text = Column(Text, nullable=True)
     link = Column(String, nullable=True)
     media_id = Column(Integer, nullable=True)

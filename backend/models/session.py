@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from backend.database import Base
 
@@ -9,6 +9,7 @@ class TelegramSession(Base):
     __tablename__ = "telegram_sessions"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     phone_number = Column(String, unique=True, nullable=False, index=True)
     session_string = Column(String, nullable=False)  # Encrypted session data
     is_active = Column(Boolean, default=True)

@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.schemas import MessageCreate, BulkMessageCreate, MessageResponse, MessageSendResponse, MessageUpdate, MessagePaginatedResponse
 from backend.models import Message, MessageStatus, Group
+from backend.models.user import User
+from backend.utils.auth import get_current_user
 from backend.services import message_service, telegram_service, settings_service
 from backend.utils.logger import setup_logger
 from typing import List
@@ -16,23 +18,26 @@ except ImportError:
 
 logger = setup_logger(__name__)
 
-router = APIRouter(prefix="/messages", tags=["Messages"])
+router = APIRouter(prefix="/api/messages", tags=["Messages"])
+
 
 
 @router.post("/send", response_model=MessageSendResponse)
 async def send_message(
     message_data: MessageCreate,
     background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Send message immediately to selected groups."""
     # Ensure Telegram client is connected
-    is_loaded = await telegram_service.load_session_from_db(db)
+    is_loaded = await telegram_service.load_session_from_db(db, current_user.id)
     if not is_loaded:
         raise HTTPException(status_code=401, detail="Not authenticated with Telegram")
     
     # Create message record
     message = Message(
+        user_id=current_user.id,
         text=message_data.text,
         link=message_data.link,
         media_id=message_data.media_id,
@@ -61,16 +66,20 @@ async def send_message(
 async def send_message_bulk(
     message_data: BulkMessageCreate,
     background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Send message to all active groups with matching permission type."""
     # Ensure Telegram client is connected
-    is_loaded = await telegram_service.load_session_from_db(db)
+    is_loaded = await telegram_service.load_session_from_db(db, current_user.id)
     if not is_loaded:
         raise HTTPException(status_code=401, detail="Not authenticated with Telegram")
     
     # Resolve target groups
-    query = db.query(Group.id).filter(Group.is_active == True)
+    query = db.query(Group.id).filter(
+        Group.user_id == current_user.id,
+        Group.is_active == True
+    )
     if message_data.permission_type != "all":
         query = query.filter(Group.permission_type == message_data.permission_type)
     
@@ -81,6 +90,7 @@ async def send_message_bulk(
     
     # Create message record
     message = Message(
+        user_id=current_user.id,
         text=message_data.text,
         link=message_data.link,
         media_id=message_data.media_id,
@@ -107,11 +117,12 @@ async def send_message_bulk(
 @router.post("/schedule/bulk", response_model=MessageResponse)
 async def schedule_message_bulk(
     message_data: BulkMessageCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Schedule a bulk message for future delivery."""
     # Ensure Telegram client is connected
-    is_loaded = await telegram_service.load_session_from_db(db)
+    is_loaded = await telegram_service.load_session_from_db(db, current_user.id)
     if not is_loaded:
         raise HTTPException(status_code=401, detail="Not authenticated with Telegram")
     
@@ -129,7 +140,7 @@ async def schedule_message_bulk(
         raise HTTPException(status_code=400, detail=f"No active groups found for permission type: {message_data.permission_type}")
 
     # Handle Timezone (similar to selective schedule)
-    user_timezone = settings_service.get_setting("timezone", "UTC")
+    user_timezone = settings_service.get_setting(db, current_user.id, "timezone", "UTC")
     try:
         tz = ZoneInfo(user_timezone)
     except Exception:
@@ -148,6 +159,7 @@ async def schedule_message_bulk(
     
     # Create message record
     message = Message(
+        user_id=current_user.id,
         text=message_data.text,
         link=message_data.link,
         media_id=message_data.media_id,
@@ -169,18 +181,29 @@ async def schedule_message_bulk(
 
 
 @router.get("/active", response_model=List[MessageResponse])
-async def get_active_jobs(db: Session = Depends(get_db)):
+async def get_active_jobs(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Get currently running message jobs."""
     active_jobs = db.query(Message).filter(
+        Message.user_id == current_user.id,
         Message.status == MessageStatus.SENDING
     ).all()
     return active_jobs
 
 
 @router.get("/{message_id}/status", response_model=MessageResponse)
-async def get_message_status(message_id: int, db: Session = Depends(get_db)):
+async def get_message_status(
+    message_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Get detailed status for a specific message."""
-    message = db.query(Message).filter(Message.id == message_id).first()
+    message = db.query(Message).filter(
+        Message.user_id == current_user.id,
+        Message.id == message_id
+    ).first()
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")
     return message
@@ -188,12 +211,14 @@ async def get_message_status(message_id: int, db: Session = Depends(get_db)):
 
 @router.get("/history", response_model=MessagePaginatedResponse)
 async def get_message_history(
+    current_user: User = Depends(get_current_user),
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db)
 ):
     """Get sent message history with pagination."""
     query = db.query(Message).filter(
+        Message.user_id == current_user.id,
         Message.status.in_([MessageStatus.SENT, MessageStatus.FAILED])
     ).order_by(Message.created_at.desc())
     
@@ -215,6 +240,7 @@ async def get_message_history(
 @router.post("/preview")
 async def preview_message(
     message_data: MessageCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Preview message with actual group data (first 3 groups)"""
@@ -235,7 +261,10 @@ async def preview_message(
         target_groups = message_data.target_groups[:3]  # Preview first 3 groups
         
         for group_id in target_groups:
-            group = db.query(Group).filter(Group.id == group_id).first()
+            group = db.query(Group).filter(
+                Group.user_id == current_user.id,
+                Group.id == group_id
+            ).first()
             if not group:
                 continue
             
@@ -277,11 +306,12 @@ async def preview_message(
 @router.post("/schedule", response_model=MessageResponse)
 async def schedule_message(
     message_data: MessageCreate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Schedule a message for future delivery."""
     # Ensure Telegram client is connected
-    is_loaded = await telegram_service.load_session_from_db(db)
+    is_loaded = await telegram_service.load_session_from_db(db, current_user.id)
     if not is_loaded:
         raise HTTPException(status_code=401, detail="Not authenticated with Telegram")
     
@@ -290,7 +320,7 @@ async def schedule_message(
         raise HTTPException(status_code=400, detail="scheduled_at is required")
     
     # Handle Timezone
-    user_timezone = settings_service.get_setting("timezone", "UTC")
+    user_timezone = settings_service.get_setting(db, current_user.id, "timezone", "UTC")
     try:
         tz = ZoneInfo(user_timezone)
     except Exception:
@@ -313,6 +343,7 @@ async def schedule_message(
     
     # Create message record
     message = Message(
+        user_id=current_user.id,
         text=message_data.text,
         link=message_data.link,
         media_id=message_data.media_id,
@@ -335,9 +366,13 @@ async def schedule_message(
 
 
 @router.get("/scheduled", response_model=List[MessageResponse])
-async def list_scheduled_jobs(db: Session = Depends(get_db)):
+async def list_scheduled_jobs(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """List all scheduled messages."""
     scheduled_messages = db.query(Message).filter(
+        Message.user_id == current_user.id,
         Message.status == MessageStatus.SCHEDULED,
         Message.scheduled_at.isnot(None)
     ).order_by(Message.scheduled_at).all()
@@ -354,10 +389,12 @@ async def list_scheduled_jobs(db: Session = Depends(get_db)):
 async def update_scheduled_job(
     message_id: int,
     update_data: MessageUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Update a scheduled message."""
     message = db.query(Message).filter(
+        Message.user_id == current_user.id,
         Message.id == message_id,
         Message.status == MessageStatus.SCHEDULED
     ).first()
@@ -376,7 +413,7 @@ async def update_scheduled_job(
         message.target_groups = update_data.target_groups
     if update_data.scheduled_at is not None:
         # Handle Timezone for update
-        user_timezone = settings_service.get_setting("timezone", "UTC")
+        user_timezone = settings_service.get_setting(db, current_user.id, "timezone", "UTC")
         try:
             tz = ZoneInfo(user_timezone)
         except Exception:
@@ -408,9 +445,14 @@ async def update_scheduled_job(
 
 
 @router.delete("/scheduled/{message_id}")
-async def cancel_scheduled_job(message_id: int, db: Session = Depends(get_db)):
+async def cancel_scheduled_job(
+    message_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Cancel a scheduled message."""
     message = db.query(Message).filter(
+        Message.user_id == current_user.id,
         Message.id == message_id,
         Message.status == MessageStatus.SCHEDULED
     ).first()
@@ -429,9 +471,16 @@ async def cancel_scheduled_job(message_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{message_id}", response_model=MessageResponse)
-async def get_message(message_id: int, db: Session = Depends(get_db)):
+async def get_message(
+    message_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Get specific message details."""
-    message = db.query(Message).filter(Message.id == message_id).first()
+    message = db.query(Message).filter(
+        Message.user_id == current_user.id,
+        Message.id == message_id
+    ).first()
     
     if not message:
         raise HTTPException(status_code=404, detail="Message not found")

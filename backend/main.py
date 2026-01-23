@@ -10,11 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from backend.database import init_db, SessionLocal
-from backend.routers import auth, groups, media, messages, admin, templates
+from backend.routers import auth, groups, media, messages, admin, templates, users
 from backend.routers import settings as settings_router
 from backend.services import message_service, settings_service
 from backend.config import settings
-from backend.migrate_analytics import migrate as run_migration
 
 
 @asynccontextmanager
@@ -23,16 +22,28 @@ async def lifespan(app: FastAPI):
     # Startup
     print("Starting Telegram Automation System...")
     
-    # Run database migration
-    try:
-        print("Checking database schema...")
-        run_migration()
-    except Exception as e:
-        print(f"Migration warning: {e}")
-    
     # Initialize database
     init_db()
     print("Database initialized")
+    
+    # Create default admin user if no users exist
+    db = SessionLocal()
+    try:
+        from backend.models.user import User
+        from backend.utils.auth import get_password_hash
+        
+        if db.query(User).count() == 0:
+            admin = User(
+                email="admin@localhost",
+                name="Administrator",
+                password_hash=get_password_hash("admin123"),
+                is_active=True
+            )
+            db.add(admin)
+            db.commit()
+            print("✓ Created default admin user: admin@localhost / admin123")
+    finally:
+        db.close()
     
     # Start scheduler
     message_service.start()
@@ -44,7 +55,6 @@ async def lifespan(app: FastAPI):
         message_service.cleanup_stuck_jobs(db)
         
         message_service.load_scheduled_messages(db)
-        settings_service.refresh_settings_cache(db)
     finally:
         db.close()
     
@@ -73,6 +83,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(users.router)
 app.include_router(auth.router)
 app.include_router(groups.router)
 app.include_router(media.router)
@@ -95,7 +106,7 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "main:app",
+        "backend.main:app",
         host=settings.host,
         port=settings.port,
         reload=True

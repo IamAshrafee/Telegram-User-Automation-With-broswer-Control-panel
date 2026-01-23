@@ -8,6 +8,7 @@ class MessageTemplate(Base):
     __tablename__ = "message_templates"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     name = Column(String, nullable=False)
     text = Column(Text, nullable=False)
     link = Column(String, nullable=True)

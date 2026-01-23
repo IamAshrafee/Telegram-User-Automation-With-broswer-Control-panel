@@ -42,7 +42,7 @@ class TelegramClientService:
             print(f"Error sending code: {e}")
             return False
     
-    async def sign_in(self, phone_number: str, code: str, password: Optional[str] = None, db: Session = None) -> tuple[bool, str]:
+    async def sign_in(self, phone_number: str, code: str, password: Optional[str] = None, db: Session = None, user_id: int = None) -> tuple[bool, str]:
         """Sign in with phone and OTP code, save session to database."""
         try:
             if not self.client:
@@ -59,8 +59,9 @@ class TelegramClientService:
             # Save session to database
             session_string = self.client.session.save()
             
-            # Check if session exists for this phone
+            # Check if session exists for this user
             existing_session = db.query(TelegramSession).filter(
+                TelegramSession.user_id == user_id,
                 TelegramSession.phone_number == phone_number
             ).first()
             
@@ -69,6 +70,7 @@ class TelegramClientService:
                 existing_session.is_active = True
             else:
                 new_session = TelegramSession(
+                    user_id=user_id,
                     phone_number=phone_number,
                     session_string=session_string,
                     is_active=True
@@ -81,12 +83,16 @@ class TelegramClientService:
         except Exception as e:
             return False, f"Authentication failed: {str(e)}"
     
-    async def load_session_from_db(self, db: Session) -> bool:
-        """Load active session from database."""
+    async def load_session_from_db(self, db: Session, user_id: int = None) -> bool:
+        """Load active session from database for a specific user."""
         try:
-            session = db.query(TelegramSession).filter(
+            query = db.query(TelegramSession).filter(
                 TelegramSession.is_active == True
-            ).first()
+            )
+            if user_id:
+                query = query.filter(TelegramSession.user_id == user_id)
+            
+            session = query.first()
             
             if session:
                 await self.initialize_client(session.session_string)

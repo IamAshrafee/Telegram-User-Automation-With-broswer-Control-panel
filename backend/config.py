@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     max_delay_seconds: int = 30
     daily_message_limit: int = 100
     
+    # Authentication
+    secret_key: str = "your-secret-key-change-this-in-production"
+    access_token_expire_days: int = 7
+    algorithm: str = "HS256"
+    
     # Server
     host: str = "0.0.0.0"
     port: int = 8000

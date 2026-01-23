@@ -41,9 +41,10 @@ def init_db():
 
 def _initialize_default_settings(db):
     """
-    Create default safety settings in the database if they don't exist.
+    Create default safety settings in the database for the admin user if they don't exist.
     """
     from backend.models.setting import Setting
+    from backend.models.user import User
 
     # Default values from the original config
     defaults = {
@@ -52,9 +53,13 @@ def _initialize_default_settings(db):
         "daily_message_limit": str(settings.daily_message_limit),
     }
 
-    for key, value in defaults.items():
-        if not Setting.get(db, key):
-            Setting.set(db, key, value)
+    # Find admin user (usually id 1)
+    admin_user = db.query(User).filter(User.id == 1).first()
     
-    db.commit()
+    if admin_user:
+        for key, value in defaults.items():
+            if not Setting.get(db, admin_user.id, key):
+                Setting.set(db, admin_user.id, key, value)
+        
+        db.commit()
 

@@ -4,8 +4,10 @@ from backend.database import get_db
 from backend.schemas.template import TemplateCreate, TemplateUpdate, TemplateResponse, DraftResponse
 from backend.models import MessageTemplate, MessageDraft
 from typing import List
+from backend.models.user import User
+from backend.utils.auth import get_current_user
 
-router = APIRouter(prefix="/templates", tags=["Templates"])
+router = APIRouter(prefix="/api/templates", tags=["Templates"])
 
 
 # ============================================
@@ -13,10 +15,16 @@ router = APIRouter(prefix="/templates", tags=["Templates"])
 # ============================================
 
 @router.post("/draft", response_model=DraftResponse)
-async def save_draft(draft_data: dict, db: Session = Depends(get_db)):
+async def save_draft(
+    draft_data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Save or update draft (only one draft per user)"""
     # Get existing draft or create new
-    draft = db.query(MessageDraft).first()
+    draft = db.query(MessageDraft).filter(
+        MessageDraft.user_id == current_user.id
+    ).first()
     
     if draft:
         # Update existing
@@ -28,7 +36,7 @@ async def save_draft(draft_data: dict, db: Session = Depends(get_db)):
         draft.bulk_permission = draft_data.get('bulk_permission')
     else:
         # Create new
-        draft = MessageDraft(**draft_data)
+        draft = MessageDraft(user_id=current_user.id, **draft_data)
         db.add(draft)
     
     db.commit()
@@ -37,18 +45,28 @@ async def save_draft(draft_data: dict, db: Session = Depends(get_db)):
 
 
 @router.get("/draft", response_model=DraftResponse)
-async def get_draft(db: Session = Depends(get_db)):
+async def get_draft(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Get the current draft"""
-    draft = db.query(MessageDraft).first()
+    draft = db.query(MessageDraft).filter(
+        MessageDraft.user_id == current_user.id
+    ).first()
     if not draft:
         raise HTTPException(status_code=404, detail="No draft found")
     return draft
 
 
 @router.delete("/draft")
-async def clear_draft(db: Session = Depends(get_db)):
+async def clear_draft(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Clear the draft"""
-    draft = db.query(MessageDraft).first()
+    draft = db.query(MessageDraft).filter(
+        MessageDraft.user_id == current_user.id
+    ).first()
     if draft:
         db.delete(draft)
         db.commit()
@@ -60,14 +78,19 @@ async def clear_draft(db: Session = Depends(get_db)):
 # ============================================
 
 @router.post("/", response_model=TemplateResponse)
-async def create_template(template_data: TemplateCreate, db: Session = Depends(get_db)):
+async def create_template(
+    template_data: TemplateCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Create a new message template"""
     template = MessageTemplate(
         name=template_data.name,
         text=template_data.text,
         link=template_data.link,
         media_id=template_data.media_id,
-        category=template_data.category
+        category=template_data.category,
+        user_id=current_user.id
     )
     db.add(template)
     db.commit()
@@ -76,9 +99,15 @@ async def create_template(template_data: TemplateCreate, db: Session = Depends(g
 
 
 @router.get("/", response_model=List[TemplateResponse])
-async def list_templates(category: str = None, db: Session = Depends(get_db)):
+async def list_templates(
+    category: str = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """List all templates, optionally filtered by category"""
-    query = db.query(MessageTemplate)
+    query = db.query(MessageTemplate).filter(
+        MessageTemplate.user_id == current_user.id
+    )
     if category:
         query = query.filter(MessageTemplate.category == category)
     templates = query.order_by(MessageTemplate.created_at.desc()).all()
@@ -86,9 +115,16 @@ async def list_templates(category: str = None, db: Session = Depends(get_db)):
 
 
 @router.get("/{template_id}", response_model=TemplateResponse)
-async def get_template(template_id: int, db: Session = Depends(get_db)):
+async def get_template(
+    template_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Get a specific template"""
-    template = db.query(MessageTemplate).filter(MessageTemplate.id == template_id).first()
+    template = db.query(MessageTemplate).filter(
+        MessageTemplate.user_id == current_user.id,
+        MessageTemplate.id == template_id
+    ).first()
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
     return template
@@ -98,10 +134,14 @@ async def get_template(template_id: int, db: Session = Depends(get_db)):
 async def update_template(
     template_id: int,
     template_data: TemplateUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Update a template"""
-    template = db.query(MessageTemplate).filter(MessageTemplate.id == template_id).first()
+    template = db.query(MessageTemplate).filter(
+        MessageTemplate.user_id == current_user.id,
+        MessageTemplate.id == template_id
+    ).first()
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
     
@@ -122,9 +162,16 @@ async def update_template(
 
 
 @router.delete("/{template_id}")
-async def delete_template(template_id: int, db: Session = Depends(get_db)):
+async def delete_template(
+    template_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Delete a template"""
-    template = db.query(MessageTemplate).filter(MessageTemplate.id == template_id).first()
+    template = db.query(MessageTemplate).filter(
+        MessageTemplate.user_id == current_user.id,
+        MessageTemplate.id == template_id
+    ).first()
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
     

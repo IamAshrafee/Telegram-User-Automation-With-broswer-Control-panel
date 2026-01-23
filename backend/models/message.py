@@ -19,6 +19,7 @@ class Message(Base):
     __tablename__ = "messages"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     text = Column(Text, nullable=False)
     link = Column(String, nullable=True)
     media_id = Column(Integer, ForeignKey("media.id"), nullable=True)

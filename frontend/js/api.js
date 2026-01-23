@@ -44,16 +44,29 @@ class APIClient {
   }
 
   async request(endpoint, options = {}) {
+    const url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
     try {
-      const url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+      const token = localStorage.getItem('access_token');
+      const headers = {
+        "Content-Type": "application/json",
+        ...options.headers,
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
       const response = await fetch(`${this.API_BASE}${url}`, {
         ...options,
-        headers: {
-          "Content-Type": "application/json",
-          ...options.headers,
-        },
+        headers: headers,
       });
+
+      if (response.status === 401) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login.html';
+        return; // Stop processing
+      }
 
       return await this.handleResponse(response, options);
     } catch (error) {

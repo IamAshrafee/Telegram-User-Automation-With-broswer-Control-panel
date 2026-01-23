@@ -177,15 +177,17 @@ export function setupAuth() {
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
       try {
-        await api.post("/auth/logout", {});
-        isAuthenticated = false;
-        showAuthModal();
-        if (phoneInput) phoneInput.value = "";
-        if (otpInput) otpInput.value = "";
-        if (passwordInput) passwordInput.value = "";
-        if (phoneStep) phoneStep.classList.remove("hidden");
-        if (otpStep) otpStep.classList.add("hidden");
-        if (passwordStep) passwordStep.classList.add("hidden");
+        // Logout from Telegram session (best effort)
+        try {
+            await api.post("/auth/logout", {});
+        } catch (e) {
+            console.warn("Telegram logout failed or not active:", e);
+        }
+        
+        // Logout from web session
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login.html';
       } catch (error) {
         console.error("Logout error:", error);
       }

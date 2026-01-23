@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum as SQLEnum, ForeignKey
 from sqlalchemy.sql import func
 from backend.database import Base
 import enum
@@ -19,6 +19,7 @@ class Group(Base):
     __tablename__ = "groups"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     telegram_id = Column(String, unique=True, nullable=False, index=True)
     title = Column(String, nullable=False)
     permission_type = Column(SQLEnum(PermissionType), default=PermissionType.ALL)

@@ -4,13 +4,19 @@ from backend.database import get_db
 from backend.schemas import SendCodeRequest, VerifyCodeRequest, SessionStatusResponse, AuthResponse
 from backend.services import telegram_service
 from backend.models import TelegramSession
+from backend.models.user import User
+from backend.utils.auth import get_current_user
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter(prefix="/api/auth/telegram", tags=["Telegram Authentication"])
 
 
 @router.post("/send-code", response_model=AuthResponse)
-async def send_code(request: SendCodeRequest, db: Session = Depends(get_db)):
-    """Send OTP code to phone number."""
+async def send_code(
+    request: SendCodeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Send OTP code to phone number (requires web authentication)."""
     success = await telegram_service.send_code_request(request.phone_number)
     
     if success:
@@ -23,13 +29,18 @@ async def send_code(request: SendCodeRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/verify-code", response_model=AuthResponse)
-async def verify_code(request: VerifyCodeRequest, db: Session = Depends(get_db)):
-    """Verify OTP code and create session."""
+async def verify_code(
+    request: VerifyCodeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Verify OTP code and create Telegram session linked to user."""
     success, message = await telegram_service.sign_in(
         request.phone_number,
         request.code,
         request.password,
-        db
+        db,
+        current_user.id  # Link session to authenticated user
     )
     
     if message == "2FA_REQUIRED":
@@ -40,6 +51,7 @@ async def verify_code(request: VerifyCodeRequest, db: Session = Depends(get_db))
     
     if success:
         session = db.query(TelegramSession).filter(
+            TelegramSession.user_id == current_user.id,
             TelegramSession.phone_number == request.phone_number
         ).first()
         
@@ -56,15 +68,19 @@ async def verify_code(request: VerifyCodeRequest, db: Session = Depends(get_db))
 
 
 @router.get("/status", response_model=SessionStatusResponse)
-async def get_status(db: Session = Depends(get_db)):
-    """Check if there's an active session."""
+async def get_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Check if current user has an active Telegram session."""
     session = db.query(TelegramSession).filter(
+        TelegramSession.user_id == current_user.id,
         TelegramSession.is_active == True
     ).first()
     
     if session:
         # Verify session is still valid
-        is_valid = await telegram_service.load_session_from_db(db)
+        is_valid = await telegram_service.load_session_from_db(db, current_user.id)
         
         return SessionStatusResponse(
             is_active=is_valid,
@@ -75,9 +91,13 @@ async def get_status(db: Session = Depends(get_db)):
 
 
 @router.post("/logout", response_model=AuthResponse)
-async def logout(db: Session = Depends(get_db)):
-    """Invalidate current session."""
+async def logout(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Invalidate current user's Telegram session."""
     session = db.query(TelegramSession).filter(
+        TelegramSession.user_id == current_user.id,
         TelegramSession.is_active == True
     ).first()
     
@@ -88,7 +108,7 @@ async def logout(db: Session = Depends(get_db)):
         
         return AuthResponse(
             success=True,
-            message="Logged out successfully"
+            message="Telegram session logged out successfully"
         )
     
-    raise HTTPException(status_code=404, detail="No active session found")
+    raise HTTPException(status_code=404, detail="No active Telegram session found")

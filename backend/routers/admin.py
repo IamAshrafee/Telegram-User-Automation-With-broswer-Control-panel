@@ -1,19 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException
+from backend.models.user import User
+from backend.utils.auth import get_current_user
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.services import admin_service, settings_service
 
-router = APIRouter(prefix="/admin", tags=["Admin"])
+router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 
 @router.get("/rate-limit-status")
-async def get_rate_limit_status(db: Session = Depends(get_db)):
+async def get_rate_limit_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Get current rate limiting status"""
     from backend.models import Message, MessageStatus
     from datetime import datetime, timedelta
     
     # Get settings from service (cached)
-    daily_limit = settings_service.get_setting("daily_message_limit", 100)
+    daily_limit = int(settings_service.get_setting(db, current_user.id, "daily_message_limit", 100))
     
     today = datetime.now().date()
     
@@ -26,6 +31,7 @@ async def get_rate_limit_status(db: Session = Depends(get_db)):
     # Note: Using 'sent_at' corresponds to when the batch started. 
     # This might edge-case cross-day batches, but consistent with safety limit.
     today_messages = db.query(Message).filter(
+        Message.user_id == current_user.id,
         Message.status == MessageStatus.SENT,
         Message.sent_at >= start_of_day
     ).all()
@@ -52,12 +58,15 @@ async def get_rate_limit_status(db: Session = Depends(get_db)):
 
 
 @router.delete("/clear/media")
-async def clear_media(db: Session = Depends(get_db)):
+async def clear_media(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Delete all media records from database and files from storage.
     """
     try:
-        deleted_count, files_deleted = admin_service.clear_media_data(db)
+        deleted_count, files_deleted = admin_service.clear_media_data(db, current_user.id)
         return {
             "success": True,
             "message": f"Cleared {deleted_count} media records and {files_deleted} files"
@@ -67,12 +76,15 @@ async def clear_media(db: Session = Depends(get_db)):
 
 
 @router.delete("/clear/groups")
-async def clear_groups(db: Session = Depends(get_db)):
+async def clear_groups(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Delete all group records from database.
     """
     try:
-        deleted_count = admin_service.clear_groups_data(db)
+        deleted_count = admin_service.clear_groups_data(db, current_user.id)
         return {
             "success": True,
             "message": f"Cleared {deleted_count} group records"
@@ -82,12 +94,15 @@ async def clear_groups(db: Session = Depends(get_db)):
 
 
 @router.delete("/clear/messages")
-async def clear_messages(db: Session = Depends(get_db)):
+async def clear_messages(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Delete all message history from database.
     """
     try:
-        deleted_count = admin_service.clear_messages_data(db)
+        deleted_count = admin_service.clear_messages_data(db, current_user.id)
         return {
             "success": True,
             "message": f"Cleared {deleted_count} message records"
@@ -97,12 +112,15 @@ async def clear_messages(db: Session = Depends(get_db)):
 
 
 @router.delete("/clear/scheduled")
-async def clear_scheduled(db: Session = Depends(get_db)):
+async def clear_scheduled(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Delete all scheduled jobs and cancel pending tasks.
     """
     try:
-        deleted_count = admin_service.clear_scheduled_data(db)
+        deleted_count = admin_service.clear_scheduled_data(db, current_user.id)
         return {
             "success": True,
             "message": f"Cleared {deleted_count} scheduled jobs"
@@ -112,12 +130,15 @@ async def clear_scheduled(db: Session = Depends(get_db)):
 
 
 @router.delete("/clear/all-except-auth")
-async def clear_all_except_auth(db: Session = Depends(get_db)):
+async def clear_all_except_auth(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Clear all data but keep authentication session.
     """
     try:
-        stats = admin_service.clear_all_except_auth(db)
+        stats = admin_service.clear_all_except_auth(db, current_user.id)
         return {
             "success": True,
             "message": "Cleared all data except authentication",
@@ -128,13 +149,16 @@ async def clear_all_except_auth(db: Session = Depends(get_db)):
 
 
 @router.delete("/clear/everything")
-async def clear_everything(db: Session = Depends(get_db)):
+async def clear_everything(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Clear ALL data including authentication session.
     User will be logged out.
     """
     try:
-        stats = admin_service.clear_everything(db)
+        stats = admin_service.clear_everything(db, current_user.id)
         return {
             "success": True,
             "message": "Cleared all data including authentication",

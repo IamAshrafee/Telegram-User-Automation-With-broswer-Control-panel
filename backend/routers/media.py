@@ -6,16 +6,19 @@ from backend.schemas import MediaUploadResponse, MediaListResponse, MediaDeleteR
 from backend.schemas.upload import BatchUploadResponse, MediaDuplicateResponse
 from backend.models import Media
 from backend.config import settings
+from backend.models.user import User
+from backend.utils.auth import get_current_user
 from typing import List, Optional
 import os
 import uuid
 import aiofiles
 
-router = APIRouter(prefix="/media", tags=["Media"])
+router = APIRouter(prefix="/api/media", tags=["Media"])
 
 
 @router.get("/", response_model=PaginatedMediaResponse)
 async def list_media(
+    current_user: User = Depends(get_current_user),
     page: int = 1, 
     limit: int = 20, 
     db: Session = Depends(get_db)
@@ -24,10 +27,12 @@ async def list_media(
     skip = (page - 1) * limit
     
     # Get total count
-    total = db.query(Media).count()
+    total = db.query(Media).filter(Media.user_id == current_user.id).count()
     
     # Get items
-    media_files = db.query(Media).order_by(Media.uploaded_at.desc()).offset(skip).limit(limit).all()
+    media_files = db.query(Media).filter(
+        Media.user_id == current_user.id
+    ).order_by(Media.uploaded_at.desc()).offset(skip).limit(limit).all()
     
     # Add URLs
     base_url = f"http://{settings.host}:{settings.port}/media"
@@ -51,6 +56,7 @@ async def list_media(
 async def upload_media(
     files: List[UploadFile] = File(...), 
     action: str = Query("check", enum=["check", "keep", "replace"]),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -107,7 +113,10 @@ async def upload_media(
              continue
 
         # 2. Duplicate Check
-        existing_media = db.query(Media).filter(Media.filename == file.filename).first()
+        existing_media = db.query(Media).filter(
+            Media.user_id == current_user.id,
+            Media.filename == file.filename
+        ).first()
         
         # Decide what to do based on 'action'
         final_filename = file.filename
@@ -142,7 +151,10 @@ async def upload_media(
                 # To be robust we could loop, but let's stick to requirement: "_duplicate"
                 
                 # Retrieve checks just in case the duplicate name also exists
-                if db.query(Media).filter(Media.filename == final_filename).first():
+                if db.query(Media).filter(
+                    Media.user_id == current_user.id,
+                    Media.filename == final_filename
+                ).first():
                      # Fallback to uuid for safety if even the _duplicate exists
                      final_filename = f"{name}_duplicate_{uuid.uuid4().hex[:4]}{ext}"
 
@@ -182,7 +194,8 @@ async def upload_media(
                 filename=final_filename, # User facing name
                 filepath=filepath,       # System path
                 file_size=len(content),
-                mime_type=file.content_type
+                mime_type=file.content_type,
+                user_id=current_user.id
             )
             db.add(new_media)
             db.flush() # to get ID
@@ -200,10 +213,12 @@ async def upload_media(
 
 
 @router.get("/{media_id}")
-async def get_media(media_id: int, db: Session = Depends(get_db)):
+async def get_media(media_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Get a specific media file."""
-    media = db.query(Media).filter(Media.id == media_id).first()
-    
+    media = db.query(Media).filter(
+        Media.user_id == current_user.id,
+        Media.id == media_id
+    ).first()
     if not media:
         raise HTTPException(status_code=404, detail="Media not found")
     
@@ -218,10 +233,16 @@ async def get_media(media_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/{media_id}", response_model=MediaDeleteResponse)
-async def delete_media(media_id: int, db: Session = Depends(get_db)):
+async def delete_media(
+    media_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Delete a media file."""
-    media = db.query(Media).filter(Media.id == media_id).first()
-    
+    media = db.query(Media).filter(
+        Media.user_id == current_user.id,
+        Media.id == media_id
+    ).first()    
     if not media:
         raise HTTPException(status_code=404, detail="Media not found")
     
