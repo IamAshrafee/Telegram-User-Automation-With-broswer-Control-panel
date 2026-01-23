@@ -37,7 +37,7 @@ export const getApiBase = () => {
   }
 
   // Ensure it starts with / and ends without /
-  const final = (origin + base).replace(/\/+$/, "");
+  const final = (origin + base).replace(/\/+$/, "") + "/api";
   console.log("[Stealth Mode] API Base detected:", final);
   return final;
 };

@@ -24,7 +24,10 @@ async function register(name, email, password) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.detail || 'Registration failed');
+        const errorMsg = typeof data.detail === 'object' 
+            ? JSON.stringify(data.detail) 
+            : (data.detail || 'Registration failed');
+        throw new Error(errorMsg);
     }
 
     // Store token and user data
@@ -57,7 +60,10 @@ async function login(email, password) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.detail || 'Login failed');
+        const errorMsg = typeof data.detail === 'object' 
+            ? JSON.stringify(data.detail) 
+            : (data.detail || 'Login failed');
+        throw new Error(errorMsg);
     }
 
     // Store token and user data

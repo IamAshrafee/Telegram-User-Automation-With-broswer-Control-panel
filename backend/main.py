@@ -34,14 +34,14 @@ async def lifespan(app: FastAPI):
         
         if db.query(User).count() == 0:
             admin = User(
-                email="admin@localhost",
+                email="admin@example.com",
                 name="Administrator",
                 password_hash=get_password_hash("admin123"),
                 is_active=True
             )
             db.add(admin)
             db.commit()
-            print("✓ Created default admin user: admin@localhost / admin123")
+            print("✓ Created default admin user: admin@example.com / admin123")
     finally:
         db.close()
     

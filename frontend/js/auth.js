@@ -9,7 +9,7 @@ let isAuthenticated = false;
 export async function checkAuthStatus() {
   console.log("[Auth] Checking session status...");
   try {
-    const status = await api.get("/auth/status");
+    const status = await api.get("/auth/telegram/status");
     isAuthenticated = status.is_active;
 
     if (isAuthenticated) {
@@ -87,7 +87,7 @@ export function setupAuth() {
       sendCodeBtn.textContent = "Sending...";
 
       console.log("[Auth] Requesting OTP for:", phoneNumber);
-      await api.post("/auth/send-code", { phone_number: phoneNumber });
+      await api.post("/auth/telegram/send-code", { phone_number: phoneNumber });
 
       showToast("OTP code sent! Check your Telegram app.", "success");
       if (phoneStep) phoneStep.classList.add("hidden");
@@ -114,7 +114,7 @@ export function setupAuth() {
         verifyCodeBtn.disabled = true;
         verifyCodeBtn.textContent = "Verifying...";
 
-        const response = await api.post("/auth/verify-code", {
+        const response = await api.post("/auth/telegram/verify-code", {
           phone_number: phoneNumber,
           code: code,
         });
@@ -154,7 +154,7 @@ export function setupAuth() {
         verifyPasswordBtn.disabled = true;
         verifyPasswordBtn.textContent = "Verifying...";
 
-        const response = await api.post("/auth/verify-code", {
+        const response = await api.post("/auth/telegram/verify-code", {
           phone_number: phoneNumber,
           code: code,
           password: password,
@@ -179,7 +179,7 @@ export function setupAuth() {
       try {
         // Logout from Telegram session (best effort)
         try {
-            await api.post("/auth/logout", {});
+            await api.post("/auth/telegram/logout", {});
         } catch (e) {
             console.warn("Telegram logout failed or not active:", e);
         }
