@@ -34,6 +34,7 @@
     <link rel="stylesheet" href="css/dashboard.css" />
     <link rel="stylesheet" href="css/forms.css" />
     <link rel="stylesheet" href="css/cards.css" />
+    <link rel="stylesheet" href="css/settings.css" />
     <link rel="stylesheet" href="css/media.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -729,152 +730,128 @@
         </section>
 
         <!-- Settings Section -->
+        <!-- Settings Section -->
         <section id="settings" class="content-section">
           <div class="section-header">
             <h2>⚙️ Settings</h2>
+            <p class="text-secondary">Configure automation parameters and defaults</p>
           </div>
+          
           <div class="settings-container">
+            <!-- Automation Delays -->
             <div class="settings-card">
-              <h3>🕒 Message Delays</h3>
+              <h3><span class="icon">🕒</span> Message Delays</h3>
               <p class="settings-description">
-                Random delays between messages help avoid spam detection
+                Configure random delays between messages to mimic human behavior and avoid spam detection.
               </p>
-              <div class="form-group">
+              
+              <div class="settings-form-group">
                 <label for="minDelay">Minimum Delay (seconds)</label>
-                <input
-                  type="number"
-                  id="minDelay"
-                  min="5"
-                  max="300"
-                  placeholder="10"
-                />
+                <div class="input-with-icon">
+                    <span class="input-icon">⏱️</span>
+                    <input type="number" id="minDelay" min="5" max="300" placeholder="e.g. 10">
+                </div>
                 <span class="help-text">Minimum: 5 seconds</span>
               </div>
-              <div class="form-group">
+              
+              <div class="settings-form-group">
                 <label for="maxDelay">Maximum Delay (seconds)</label>
-                <input
-                  type="number"
-                  id="maxDelay"
-                  min="5"
-                  max="300"
-                  placeholder="30"
-                />
-                <span class="help-text">Maximum: 300 seconds (5 minutes)</span>
+                <div class="input-with-icon">
+                    <span class="input-icon">⏳</span>
+                    <input type="number" id="maxDelay" min="5" max="300" placeholder="e.g. 30">
+                </div>
+                <span class="help-text">Maximum: 300 seconds</span>
               </div>
             </div>
 
+            <!-- Limits & Localization -->
             <div class="settings-card">
-              <h3>📊 Daily Limits</h3>
+              <h3><span class="icon">📊</span> Limits & Zone</h3>
               <p class="settings-description">
-                Protect your account from restrictions
+                Set daily safety limits and your local timezone for accurate scheduling.
               </p>
-              <div class="form-group">
-                <label for="dailyLimit">Daily Message Limit</label>
-                <input
-                  type="number"
-                  id="dailyLimit"
-                  min="1"
-                  max="1000"
-                  placeholder="100"
-                />
-                <span class="help-text">Maximum: 1000 messages per day</span>
+              
+              <div class="settings-form-group">
+                <label for="dailyLimit">Daily Safety Limit</label>
+                <div class="input-with-icon">
+                    <span class="input-icon">🛡️</span>
+                    <input type="number" id="dailyLimit" min="1" max="1000" placeholder="e.g. 100">
+                </div>
+                <span class="help-text">Max messages/day before auto-stop</span>
               </div>
-              <div class="settings-card">
-              <h3>🌍 Your Timezone</h3>
-              <p class="settings-description">
-                Ensure scheduled messages are sent at the correct time for your location
-              </p>
-              <div class="form-group">
-                <label for="timezoneSelect">Select Timezone</label>
-                <select id="timezoneSelect" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--color-border);">
-                  <option value="UTC">UTC (Universal Time)</option>
-                  <option value="Asia/Dhaka">Asia/Dhaka (Bangladesh)</option>
-                  <option value="Asia/Kolkata">Asia/Kolkata (India)</option>
-                  <option value="Asia/Singapore">Asia/Singapore</option>
-                  <option value="Asia/Dubai">Asia/Dubai</option>
-                  <option value="Europe/London">Europe/London</option>
-                  <option value="Europe/Berlin">Europe/Berlin</option>
-                  <option value="America/New_York">America/New_York (Eastern)</option>
-                  <option value="America/Chicago">America/Chicago (Central)</option>
-                  <option value="America/Denver">America/Denver (Mountain)</option>
-                  <option value="America/Los_Angeles">America/Los_Angeles (Pacific)</option>
-                  <option value="Australia/Sydney">Australia/Sydney</option>
-                </select>
-                <span class="help-text">Select YOUR local timezone. The server will handle the conversion.</span>
-              </div>
-            </div>
+
+              <div class="settings-form-group">
+                <label for="timezoneSelect">Timezone</label>
+                <div class="input-with-icon">
+                    <span class="input-icon">🌍</span>
+                    <select id="timezoneSelect">
+                        <option value="UTC">UTC (Universal Time)</option>
+                        <option value="Asia/Dhaka">Asia/Dhaka (Bangladesh)</option>
+                        <option value="Asia/Kolkata">Asia/Kolkata (India)</option>
+                        <option value="Asia/Singapore">Asia/Singapore</option>
+                        <option value="Asia/Dubai">Asia/Dubai</option>
+                        <option value="Europe/London">Europe/London</option>
+                        <option value="Europe/Berlin">Europe/Berlin</option>
+                        <option value="America/New_York">America/New_York</option>
+                        <option value="America/Chicago">America/Chicago</option>
+                        <option value="America/Los_Angeles">America/Los_Angeles</option>
+                    </select>
+                </div>
               </div>
             </div>
 
-            <div class="settings-actions">
-              <button id="saveSettingsBtn" class="btn btn-primary btn-large">
-                💾 Save Changes
-              </button>
-              <button id="resetSettingsBtn" class="btn btn-secondary">
-                🔄 Reset to Defaults
-              </button>
-              <button
-                id="settingsLogoutBtn"
-                class="btn btn-secondary"
-                style="
-                  margin-left: auto;
-                  color: var(--color-danger);
-                  border-color: var(--color-danger);
-                "
-              >
-                🚪 Logout
-              </button>
+            <!-- Danger Zone -->
+            <div class="danger-zone-container">
+                <div class="settings-card danger-zone">
+                    <h3><span class="icon">☢️</span> Danger Zone</h3>
+                    <p class="settings-description" style="color: #b91c1c;">
+                        Destructive actions. Deleted data cannot be recovered. Please be certain.
+                    </p>
+                    
+                    <div class="danger-grid">
+                        <div class="danger-item">
+                            <h4>Clear Media Library</h4>
+                            <p>Delete all uploaded images.</p>
+                            <button data-clear="media" class="btn btn-outline-danger btn-sm">Delete Media</button>
+                        </div>
+                        <div class="danger-item">
+                            <h4>Clear Groups</h4>
+                            <p>Remove all synchronized groups.</p>
+                            <button data-clear="groups" class="btn btn-outline-danger btn-sm">Delete Groups</button>
+                        </div>
+                        <div class="danger-item">
+                            <h4>Clear History</h4>
+                            <p>Delete all sent message logs.</p>
+                            <button data-clear="messages" class="btn btn-outline-danger btn-sm">Delete History</button>
+                        </div>
+                        <div class="danger-item">
+                            <h4>Clear Scheduled</h4>
+                            <p>Cancel all pending messages.</p>
+                            <button data-clear="scheduled" class="btn btn-outline-danger btn-sm">Delete Scheduled</button>
+                        </div>
+                        <div class="danger-item" style="border-color: #f87171; background: #fff1f2;">
+                            <h4 style="color: #ef4444;">Reset Everything</h4>
+                            <p>Delete ALL data (keeps login).</p>
+                            <button data-clear="all" class="btn btn-danger-extreme btn-sm">Reset Data</button>
+                        </div>
+                        <div class="danger-item full-width" style="border-color: #f87171; background: #fff1f2;">
+                            <h4 style="color: #ef4444;">Logout & Clear</h4>
+                            <p>Delete all data AND logout.</p>
+                            <button data-clear="everything" class="btn btn-danger-extreme btn-sm">Clear Everyhing</button>
+                        </div>
+                    </div>
+                </div>
             </div>
-
-            <div class="settings-info">
-              <p>
-                ℹ️ <strong>Changes take effect immediately</strong> for all new
-                messages. No server restart required.
-              </p>
+          </div>
+          
+          <!-- Sticky Action Bar -->
+          <div class="settings-actions">
+            <div class="settings-info" style="margin-right: auto; font-size: 0.9rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 8px;">
+                <span>ℹ️ Changes take effect immediately</span>
             </div>
-
-            <!-- Development Tools -->
-            <div class="settings-card danger-zone">
-              <h3>🗑️ Development Tools</h3>
-              <p class="warning-text">
-                ⚠️ <strong>WARNING:</strong> These actions cannot be undone!
-              </p>
-              <p class="settings-description">
-                Clear data by section for development and testing purposes.
-              </p>
-
-              <div class="clear-actions">
-                <button class="btn btn-danger" data-clear="media">
-                  🖼️ Clear Media Library
-                </button>
-                <button class="btn btn-danger" data-clear="groups">
-                  👥 Clear Groups
-                </button>
-                <button class="btn btn-danger" data-clear="messages">
-                  ✉️ Clear Message History
-                </button>
-                <button class="btn btn-danger" data-clear="scheduled">
-                  ⏰ Clear Scheduled Jobs
-                </button>
-                <button class="btn btn-danger" data-clear="all">
-                  🔥 Clear All Data (Keep Login)
-                </button>
-                <button class="btn btn-danger-extreme" data-clear="everything">
-                  💀 Clear Everything (Logout)
-                </button>
-              </div>
-
-              <div class="danger-info">
-                <p>
-                  <strong>Clear All Data:</strong> Removes groups, media, and
-                  messages but keeps you logged in.
-                </p>
-                <p>
-                  <strong>Clear Everything:</strong> Removes ALL data including
-                  your login session. You will be logged out.
-                </p>
-              </div>
-            </div>
+            <button id="settingsLogoutBtn" class="btn btn-secondary">🚪 Logout</button>
+            <button id="resetSettingsBtn" class="btn btn-secondary">🔄 Reset Defaults</button>
+            <button id="saveSettingsBtn" class="btn btn-primary btn-large">💾 Save Settings</button>
           </div>
         </section>
       </main>

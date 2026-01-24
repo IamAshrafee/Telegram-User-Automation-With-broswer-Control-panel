@@ -22,41 +22,76 @@ export function showToast(message, type = "success", duration = 5000) {
   const toast = document.createElement("div");
   toast.className = `toast toast-${type}`;
 
-  const icon =
-    {
-      success: "✅",
-      error: "❌",
-      warning: "⚠️",
-      info: "ℹ️",
-    }[type] || "ℹ️";
+  const iconInfo = {
+    success: { icon: "CheckCircle", color: "#10b981", title: "Success" },
+    error: { icon: "AlertCircle", color: "#ef4444", title: "Error" },
+    warning: { icon: "AlertTriangle", color: "#f59e0b", title: "Warning" },
+    info: { icon: "Info", color: "#3b82f6", title: "Information" },
+  }[type] || { icon: "Info", color: "#3b82f6", title: "Info" };
+  
+  // Use SVG icons for premium look (inline for simplicity here)
+  const icons = {
+    CheckCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
+    AlertCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`,
+    AlertTriangle: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
+    Info: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`
+  };
 
   toast.innerHTML = `
-    <span class="toast-icon">${icon}</span>
-    <span class="toast-message">${message}</span>
+    <span class="toast-icon">${icons[iconInfo.icon]}</span>
+    <div class="toast-content">
+        <div class="toast-title">${iconInfo.title}</div>
+        <div class="toast-message">${message}</div>
+    </div>
     <button class="toast-close">×</button>
+    <div class="toast-progress">
+        <div class="toast-progress-bar" style="transition: transform ${duration}ms linear;"></div>
+    </div>
   `;
 
   container.appendChild(toast);
 
-  // Animate in
-  setTimeout(() => toast.classList.add("toast-show"), 10);
+  // Trigger animation (next frame)
+  requestAnimationFrame(() => {
+    toast.classList.add("toast-show");
+    
+    // Start progress bar
+    if (duration > 0) {
+        const progressBar = toast.querySelector('.toast-progress-bar');
+        // Start full width (scaleX 1) then shrink to 0
+        progressBar.style.transform = "scaleX(1)";
+        
+        // Force reflow
+        void progressBar.offsetWidth;
+        
+        progressBar.style.transform = "scaleX(0)";
+    }
+  });
+
+  const close = () => {
+    toast.classList.remove("toast-show");
+    setTimeout(() => {
+        if (toast.parentElement) toast.remove();
+    }, 400); // Match CSS transition duration
+  };
 
   // Close button
-  toast.querySelector(".toast-close").addEventListener("click", () => {
-    closeToast(toast);
-  });
+  toast.querySelector(".toast-close").addEventListener("click", close);
 
   // Auto close
   if (duration > 0) {
-    setTimeout(() => closeToast(toast), duration);
+    setTimeout(close, duration);
   }
 
   return toast;
 }
 
 function closeToast(toast) {
+  // Helper kept for compatibility, though internal close() is preferred
   toast.classList.remove("toast-show");
-  setTimeout(() => toast.remove(), 300);
+  setTimeout(() => {
+      if(toast.parentElement) toast.remove();
+  }, 400);
 }
 
 // Progress Bar

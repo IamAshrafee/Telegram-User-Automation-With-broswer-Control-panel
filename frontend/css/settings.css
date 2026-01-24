@@ -1,0 +1,181 @@
+/* Settings Page Specific Styles */
+
+.settings-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: var(--space-6);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Settings Cards */
+.settings-card {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.settings-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-200);
+}
+
+.settings-card h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: 1.1rem;
+    color: var(--color-text-main);
+    margin-bottom: var(--space-2);
+}
+
+.settings-card h3 .icon {
+    font-size: 1.5rem;
+    background: var(--primary-50);
+    padding: 8px;
+    border-radius: 12px;
+}
+
+.settings-description {
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: var(--space-6);
+    line-height: 1.5;
+}
+
+/* Enhanced Form Groups */
+.settings-form-group {
+    margin-bottom: var(--space-5);
+    position: relative;
+}
+
+.settings-form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: var(--space-2);
+    color: var(--color-text-main);
+}
+
+.input-with-icon {
+    position: relative;
+}
+
+.input-with-icon .input-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    pointer-events: none;
+}
+
+.input-with-icon input,
+.input-with-icon select {
+    padding-left: 40px;
+    height: 48px;
+    border-radius: 10px;
+    border: 1px solid var(--slate-200);
+    width: 100%;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.input-with-icon input:focus,
+.input-with-icon select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 4px var(--primary-50);
+}
+
+.help-text {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
+/* Danger Zone */
+.danger-zone-container {
+    grid-column: 1 / -1;
+    margin-top: var(--space-8);
+}
+
+.danger-zone {
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+}
+
+.danger-zone:hover {
+    border-color: #fca5a5;
+    box-shadow: var(--shadow-md);
+}
+
+.danger-zone h3 .icon {
+    background: #fee2e2;
+}
+
+.danger-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-4);
+}
+
+.danger-item {
+    background: white;
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid #fee2e2;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.danger-item h4 {
+    color: #991b1b;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.danger-item p {
+    font-size: 0.85rem;
+    color: #7f1d1d;
+    margin: 0;
+    flex: 1;
+}
+
+/* Save Bar */
+.settings-actions {
+    position: sticky;
+    bottom: 20px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-4);
+    margin-top: var(--space-8);
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+}
+
+@media (max-width: 768px) {
+    .settings-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .settings-actions {
+        flex-direction: column;
+        position: static;
+        margin-top: var(--space-6);
+        background: white;
+    }
+    
+    .settings-actions .btn {
+        width: 100%;
+    }
+}

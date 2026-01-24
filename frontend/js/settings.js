@@ -1,5 +1,5 @@
 import { api } from "./api.js";
-import { showToast, confirmAction } from "./ui-components.js";
+import { showToast, confirmAction, showFieldError, clearFieldError } from "./ui-components.js";
 import { loadGroups } from "./groups.js";
 import { loadMedia } from "./media.js";
 import { loadScheduledJobs } from "./messages.js";
@@ -38,11 +38,20 @@ export function setupSettings() {
 
   // Real-time validation
   if (minDelayInput)
-    minDelayInput.addEventListener("input", () => validateDelays());
+    minDelayInput.addEventListener("input", () => {
+        clearFieldError("minDelay");
+        validateDelays();
+    });
   if (maxDelayInput)
-    maxDelayInput.addEventListener("input", () => validateDelays());
+    maxDelayInput.addEventListener("input", () => {
+        clearFieldError("maxDelay");
+        validateDelays();
+    });
   if (dailyLimitInput)
-    dailyLimitInput.addEventListener("input", () => validateDailyLimit());
+    dailyLimitInput.addEventListener("input", () => {
+        clearFieldError("dailyLimit");
+        validateDailyLimit();
+    });
 
   // Save settings
   saveBtn.addEventListener("click", async () => {
@@ -51,13 +60,19 @@ export function setupSettings() {
     const dailyLimit = parseInt(dailyLimitInput.value);
     const timezone = document.getElementById("timezoneSelect")?.value || "UTC";
 
+    // Clear previous errors
+    clearFieldError("minDelay");
+    clearFieldError("maxDelay");
+    clearFieldError("dailyLimit");
+
     if (!validateAll(minDelay, maxDelay, dailyLimit)) {
+      showToast("Please fix the validation errors.", "error");
       return;
     }
 
     try {
       saveBtn.disabled = true;
-      saveBtn.textContent = "💾 Saving...";
+      saveBtn.innerHTML = "💾 Saving..."; // Use innerHTML to keep icon if desirable, or textContent
 
       currentSettings = {
         min_delay_seconds: minDelay,
@@ -72,7 +87,7 @@ export function setupSettings() {
       showToast("Failed to save settings: " + error.message, "error");
     } finally {
       saveBtn.disabled = false;
-      saveBtn.textContent = "💾 Save Changes";
+      saveBtn.innerHTML = "💾 Save Settings";
     }
   });
 
@@ -81,7 +96,7 @@ export function setupSettings() {
     resetBtn.addEventListener("click", async () => {
       const confirmed = await confirmAction(
         "Reset all settings to default values?",
-        { title: "Reset Settings", confirmText: "Reset", type: "warning" },
+        { title: "Reset Settings", confirmText: "Reset Defaults", type: "warning" },
       );
       if (!confirmed) return;
 
@@ -98,12 +113,18 @@ export function setupSettings() {
 
         await api.put("/settings/", defaults);
         await loadSettings();
+        
+        // Clear checking errors visuals
+        clearFieldError("minDelay");
+        clearFieldError("maxDelay");
+        clearFieldError("dailyLimit");
+        
         showToast("Settings reset to defaults!", "success");
       } catch (error) {
         showToast("Failed to reset settings: " + error.message, "error");
       } finally {
         resetBtn.disabled = false;
-        resetBtn.textContent = "🔄 Reset to Defaults";
+        resetBtn.textContent = "🔄 Reset Defaults";
       }
     });
   }
@@ -144,7 +165,7 @@ async function clearData(type) {
 
   const confirmed = await confirmAction(
     `⚠️ WARNING\n\n${confirmations[type]}`,
-    { title: "Clear Data", confirmText: "Delete", type: "warning" },
+    { title: "Destructive Action", confirmText: "Yes, Delete", type: "warning" },
   );
   if (!confirmed) return;
 
@@ -152,8 +173,8 @@ async function clearData(type) {
     const finalConfirm = await confirmAction(
       "⚠️⚠️⚠️ FINAL WARNING ⚠️⚠️⚠️\n\nAre you ABSOLUTELY SURE?",
       {
-        title: "Final Warning",
-        confirmText: "Yes, Delete Everything",
+        title: "Final Confirmation",
+        confirmText: "I Understand, Delete",
         type: "warning",
       },
     );
@@ -200,24 +221,27 @@ function validateDelays() {
 
   const minDelay = parseInt(minDelayInput.value);
   const maxDelay = parseInt(maxDelayInput.value);
+  let isValid = true;
 
-  minDelayInput.style.borderColor = "";
-  maxDelayInput.style.borderColor = "";
+  if (isNaN(minDelay) || minDelay < 5) {
+    showFieldError("minDelay", "Minimum delay must be at least 5s");
+    isValid = false;
+  }
+  
+  if (isNaN(maxDelay) || maxDelay > 300) {
+    showFieldError("maxDelay", "Maximum delay cannot exceed 300s");
+    isValid = false;
+  }
+  
+  if (!isNaN(minDelay) && !isNaN(maxDelay) && minDelay >= maxDelay) {
+    showFieldError("minDelay", "Min delay must be less than Max delay");
+    // Also mark max delay as potential issue
+    // showFieldError("maxDelay", "Max delay must be greater than Min delay"); 
+    // ^ Avoiding double error messages for the same logic relation
+    isValid = false;
+  }
 
-  if (minDelay < 5) {
-    minDelayInput.style.borderColor = "var(--error)";
-    return false;
-  }
-  if (maxDelay > 300) {
-    maxDelayInput.style.borderColor = "var(--error)";
-    return false;
-  }
-  if (minDelay >= maxDelay) {
-    minDelayInput.style.borderColor = "var(--error)";
-    maxDelayInput.style.borderColor = "var(--error)";
-    return false;
-  }
-  return true;
+  return isValid;
 }
 
 function validateDailyLimit() {
@@ -225,35 +249,20 @@ function validateDailyLimit() {
   if (!dailyLimitInput) return false;
 
   const dailyLimit = parseInt(dailyLimitInput.value);
-  dailyLimitInput.style.borderColor = "";
 
-  if (dailyLimit < 1 || dailyLimit > 1000) {
-    dailyLimitInput.style.borderColor = "var(--error)";
+  if (isNaN(dailyLimit) || dailyLimit < 1) {
+    showFieldError("dailyLimit", "Limit must be at least 1");
+    return false;
+  }
+  if (dailyLimit > 1000) {
+    showFieldError("dailyLimit", "Limit cannot exceed 1000");
     return false;
   }
   return true;
 }
 
 function validateAll(minDelay, maxDelay, dailyLimit) {
-  if (minDelay < 5) {
-    showToast("Minimum delay must be at least 5 seconds", "error");
-    return false;
-  }
-  if (maxDelay > 300) {
-    showToast("Maximum delay cannot exceed 300 seconds (5 minutes)", "error");
-    return false;
-  }
-  if (minDelay >= maxDelay) {
-    showToast("Minimum delay must be less than maximum delay", "error");
-    return false;
-  }
-  if (dailyLimit < 1) {
-    showToast("Daily limit must be at least 1", "error");
-    return false;
-  }
-  if (dailyLimit > 1000) {
-    showToast("Daily limit cannot exceed 1000 messages", "error");
-    return false;
-  }
-  return true;
+    const delaysValid = validateDelays();
+    const limitValid = validateDailyLimit();
+    return delaysValid && limitValid;
 }
