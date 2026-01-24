@@ -124,8 +124,17 @@ class APIClient {
     });
 
     const url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    
+    // Prepare headers
+    const headers = {};
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(`${this.API_BASE}${url}`, {
       method: "POST",
+      headers: headers,
       body: formData,
     });
 
@@ -137,8 +146,17 @@ class APIClient {
     formData.append("file", file);
 
     const url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    
+    // Prepare headers
+    const headers = {};
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${this.API_BASE}${url}`, {
       method: "POST",
+      headers: headers,
       body: formData,
     });
 
