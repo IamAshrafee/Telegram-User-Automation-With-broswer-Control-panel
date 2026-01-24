@@ -31,6 +31,11 @@ class Message(Base):
     processed_count = Column(Integer, default=0)
     total_count = Column(Integer, default=0)
     
+    # Recurrence
+    recurrence_type = Column(String, default="once") # once, daily, weekly, custom
+    recurrence_interval = Column(Integer, default=0) # for custom: every X days/hours
+    recurrence_end_date = Column(DateTime(timezone=True), nullable=True)
+    
     scheduled_at = Column(DateTime(timezone=True), nullable=True)  # Null for immediate send
     sent_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -1,6 +1,6 @@
 import { api } from "./api.js";
 import { showToast, confirmAction } from "./ui-components.js";
-import { formatDate } from "./utils.js";
+import { formatDate, capitalize } from "./utils.js";
 import { progressWidget } from "./progress-widget.js";
 
 let messageHistory = [];
@@ -45,6 +45,23 @@ export function setupMessages() {
 
   if (refreshScheduledBtn)
     refreshScheduledBtn.addEventListener("click", loadScheduledJobs);
+
+  // Recurrence logic
+  const recurrenceTypeSelect = document.getElementById("recurrenceType");
+  const recurrenceCustomGroup = document.getElementById("recurrenceCustomGroup");
+  const recurrenceEndGroup = document.getElementById("recurrenceEndGroup");
+  
+  if (recurrenceTypeSelect) {
+      recurrenceTypeSelect.addEventListener("change", (e) => {
+          const type = e.target.value;
+          if (recurrenceCustomGroup) {
+              recurrenceCustomGroup.style.display = type === "custom" ? "block" : "none";
+          }
+          if (recurrenceEndGroup) {
+              recurrenceEndGroup.style.display = type !== "once" ? "block" : "none";
+          }
+      });
+  }
 
   // Setup list delegation
   const scheduledList = document.getElementById("scheduledList");
@@ -115,8 +132,28 @@ async function handleSendMessage() {
       media_id: mediaId ? parseInt(mediaId) : null,
     };
 
-    if (isScheduled)
+    if (isScheduled) {
       payload.scheduled_at = new Date(scheduleTime).toISOString();
+      
+      const recurrenceType = document.getElementById("recurrenceType").value;
+      payload.recurrence_type = recurrenceType;
+      
+      if (recurrenceType === "custom") {
+          const interval = parseInt(document.getElementById("recurrenceInterval").value);
+          if (!interval || interval < 1) {
+              showToast("Please enter a valid recurrence interval (minutes)", "error");
+              btn.disabled = false;
+              btn.textContent = "📅 Schedule Message";
+              return;
+          }
+          payload.recurrence_interval = interval;
+      }
+      
+      const endDate = document.getElementById("recurrenceEndDate").value;
+      if (endDate) {
+          payload.recurrence_end_date = new Date(endDate).toISOString();
+      }
+    }
 
     let endpoint = "";
     if (isBulk) {
@@ -217,6 +254,7 @@ function renderScheduledJobs(jobs) {
     meta.className = "scheduled-meta";
     meta.innerHTML = `
         <span>📅 ${formatDate(job.scheduled_at)}</span>
+        <span>${job.recurrence_type && job.recurrence_type !== 'once' ? '🔁 ' + capitalize(job.recurrence_type) : ''}</span>
         <span>🎯 ${job.is_bulk ? "Bulk: " + job.permission_type : job.group_count + " groups"}</span>
     `;
 

@@ -36,8 +36,16 @@ export const getApiBase = () => {
     base = base.substring(0, base.lastIndexOf("/"));
   }
 
-  // Ensure it starts with / and ends without /
+// Ensure it starts with / and ends without /
   const final = (origin + base).replace(/\/+$/, "") + "/api";
   console.log("[Stealth Mode] API Base detected:", final);
   return final;
 };
+
+/**
+ * Capitalize first letter of string
+ */
+export function capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}

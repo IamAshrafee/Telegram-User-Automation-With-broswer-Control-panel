@@ -127,6 +127,108 @@ class MessageService:
 
     # --- Message Sending Methods ---
     
+    # --- Recurrence Logic ---
+
+    def _handle_recurrence(self, db: Session, message: Message):
+        """
+        Check if message should be repeated and schedule next occurrence.
+        Creates a COPY of the message for the next run.
+        """
+        from datetime import timezone # Ensure import availability
+        
+        # If no recurrence, skip
+        if not message.recurrence_type or message.recurrence_type == "once":
+            return
+            
+        # Use scheduled_at as base
+        base_time = message.scheduled_at 
+        if not base_time:
+             # Fallback if somehow missing
+             base_time = datetime.now(timezone.utc)
+
+        now = datetime.now(base_time.tzinfo if base_time.tzinfo else timezone.utc)
+        
+        # Check end date
+        if message.recurrence_end_date:
+            end_date = message.recurrence_end_date
+            # Harmonize timezones
+            if end_date.tzinfo is None and now.tzinfo:
+                 end_date = end_date.replace(tzinfo=now.tzinfo)
+            elif end_date.tzinfo and now.tzinfo is None:
+                 now = now.replace(tzinfo=end_date.tzinfo)
+            
+            if now >= end_date:
+                logger.info(f"Recurrence ended for message {message.id} (End date reached)")
+                return
+
+        # Calculate next run time
+        next_run = None
+        
+        if message.recurrence_type == "daily":
+            # Add 1 day
+            next_run = base_time + timedelta(days=1)
+        
+        elif message.recurrence_type == "weekly":
+            # Add 7 days
+            next_run = base_time + timedelta(weeks=1)
+            
+        elif message.recurrence_type == "custom":
+            # Custom interval in MINUTES (as agreed in mental model)
+            minutes = message.recurrence_interval
+            if minutes > 0:
+                next_run = base_time + timedelta(minutes=minutes)
+        
+        # Catch-up logic: If next_run is still in the past, keep advancing
+        # (Only strict if we care about missed schedules. 
+        #  If we just want 'next one', next_run should be > now)
+        if next_run:
+            while next_run <= datetime.now(next_run.tzinfo):
+                 if message.recurrence_type == "daily":
+                     next_run += timedelta(days=1)
+                 elif message.recurrence_type == "weekly":
+                     next_run += timedelta(weeks=1)
+                 elif message.recurrence_type == "custom":
+                     next_run += timedelta(minutes=message.recurrence_interval)
+            
+            # Check end date again
+            if message.recurrence_end_date:
+                end_date = message.recurrence_end_date
+                if end_date.tzinfo is None and next_run.tzinfo:
+                     end_date = end_date.replace(tzinfo=next_run.tzinfo)
+                
+                if next_run > end_date:
+                    logger.info(f"Next run {next_run} is after end date. Stopping recurrence.")
+                    return
+
+            # Create NEW message record
+            new_message = Message(
+                user_id=message.user_id,
+                text=message.text,
+                link=message.link,
+                media_id=message.media_id,
+                target_groups=message.target_groups,
+                status=MessageStatus.SCHEDULED,
+                scheduled_at=next_run,
+                recurrence_type=message.recurrence_type,
+                recurrence_interval=message.recurrence_interval,
+                recurrence_end_date=message.recurrence_end_date
+            )
+            
+            db.add(new_message)
+            db.commit() # Commit to get ID
+            db.refresh(new_message)
+            
+            # Schedule the actual job
+            # We need to convert to UTC for scheduler
+            next_run_utc = next_run
+            if next_run.tzinfo:
+                 next_run_utc = next_run.astimezone(timezone.utc)
+            else:
+                 next_run_utc = next_run.replace(tzinfo=timezone.utc)
+            
+            self.schedule_message(new_message.id, next_run_utc)
+            logger.info(f"Created recurring message {new_message.id} for {next_run}")
+
     def _check_daily_limit(self, db: Session) -> bool:
         """
         Check if daily message limit has been reached by counting actual DB records.
@@ -401,6 +503,13 @@ class MessageService:
         if sent_count > 0:
             message.status = MessageStatus.SENT
             message.sent_at = datetime.now()
+            
+            # Handle Recurrence: If recurring, schedule the next one
+            try:
+                self._handle_recurrence(db, message)
+            except Exception as e:
+                logger.error(f"Error handling recurrence for message {message.id}: {e}")
+                
         else:
             message.status = MessageStatus.FAILED
         

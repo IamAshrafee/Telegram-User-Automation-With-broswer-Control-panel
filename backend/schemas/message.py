@@ -11,6 +11,9 @@ class MessageCreate(BaseModel):
     media_id: Optional[int] = None
     target_groups: List[int] = Field(..., min_items=1, description="List of group IDs to send to")
     scheduled_at: Optional[datetime] = None
+    recurrence_type: str = "once"
+    recurrence_interval: int = 0
+    recurrence_end_date: Optional[datetime] = None
 
 
 class BulkMessageCreate(BaseModel):
@@ -20,6 +23,9 @@ class BulkMessageCreate(BaseModel):
     media_id: Optional[int] = None
     permission_type: str = Field(..., description="Target permission type (all, text_only, etc)")
     scheduled_at: Optional[datetime] = None
+    recurrence_type: str = "once"
+    recurrence_interval: int = 0
+    recurrence_end_date: Optional[datetime] = None
 
 
 class MessageUpdate(BaseModel):
@@ -29,6 +35,9 @@ class MessageUpdate(BaseModel):
     media_id: Optional[int] = None
     target_groups: Optional[List[int]] = None
     scheduled_at: Optional[datetime] = None
+    recurrence_type: Optional[str] = None
+    recurrence_interval: Optional[int] = None
+    recurrence_end_date: Optional[datetime] = None
 
 
 class MessageResponse(BaseModel):
@@ -44,6 +53,10 @@ class MessageResponse(BaseModel):
     processed_count: int = 0
     total_count: int = 0
     group_status: dict = {}
+    
+    recurrence_type: str = "once"
+    recurrence_interval: int = 0
+    recurrence_end_date: Optional[datetime] = None
     
     scheduled_at: Optional[datetime] = None
     sent_at: Optional[datetime] = None

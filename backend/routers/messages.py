@@ -165,7 +165,10 @@ async def schedule_message_bulk(
         media_id=message_data.media_id,
         target_groups=target_groups,
         status=MessageStatus.SCHEDULED,
-        scheduled_at=scheduled_at_utc
+        scheduled_at=scheduled_at_utc,
+        recurrence_type=message_data.recurrence_type,
+        recurrence_interval=message_data.recurrence_interval,
+        recurrence_end_date=message_data.recurrence_end_date
     )
     db.add(message)
     db.commit()
@@ -349,7 +352,10 @@ async def schedule_message(
         media_id=message_data.media_id,
         target_groups=message_data.target_groups,
         status=MessageStatus.SCHEDULED,
-        scheduled_at=scheduled_at_utc
+        scheduled_at=scheduled_at_utc,
+        recurrence_type=message_data.recurrence_type,
+        recurrence_interval=message_data.recurrence_interval,
+        recurrence_end_date=message_data.recurrence_end_date
     )
     db.add(message)
     db.commit()
@@ -433,6 +439,13 @@ async def update_scheduled_job(
         
         # Reschedule the job
         message_service.schedule_message(message.id, scheduled_at_utc)
+
+    if update_data.recurrence_type is not None:
+        message.recurrence_type = update_data.recurrence_type
+    if update_data.recurrence_interval is not None:
+        message.recurrence_interval = update_data.recurrence_interval
+    if update_data.recurrence_end_date is not None:
+        message.recurrence_end_date = update_data.recurrence_end_date
     
     db.commit()
     db.refresh(message)
