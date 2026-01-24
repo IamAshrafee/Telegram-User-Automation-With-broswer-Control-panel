@@ -383,9 +383,10 @@ function renderHistory(items, append = false) {
 
   const fragment = document.createDocumentFragment();
 
-  items.forEach((msg) => {
+  items.forEach((msg, index) => {
     const item = document.createElement("div");
     item.className = `history-item ${msg.status.toLowerCase()}`;
+    item.style.animationDelay = `${index * 0.05}s`;
 
     // Simple text search filter on client side if needed,
     // but better to omit if pagination is active to avoid confusion.

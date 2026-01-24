@@ -230,25 +230,21 @@ class MessageService:
             self.schedule_message(new_message.id, next_run_utc)
             logger.info(f"Created recurring message {new_message.id} for {next_run}")
 
-    def _check_daily_limit(self, db: Session) -> bool:
+    def _check_daily_limit(self, db: Session, user_id: int) -> bool:
         """
         Check if daily message limit has been reached by counting actual DB records.
         """
-        limit = settings_service.get_setting('daily_message_limit', 100)
+        limit = settings_service.get_setting(db, user_id, 'daily_message_limit', 100)
         
         # Calculate start of today (local server time)
         today = datetime.now().date()
         start_of_day = datetime.combine(today, datetime.min.time())
         
-        # Fetch all messages that have sent activity today
-        # We look for messages sent_at >= today. 
-        # Note: A message might have been started yesterday and finished today? 
-        # For simplicity, we assume 'sent_at' is when the bulk batch started/finished.
-        # Ideally we'd timestamp each individual send, but 'sent_at' is the batch timestamp.
-        # This is the best approximation without a dedicated 'MessageDelivery' table.
+        # Fetch all messages that have sent activity today for this user
         messages_today = db.query(Message).filter(
+            Message.user_id == user_id,
             Message.status.in_([MessageStatus.SENT, MessageStatus.SENDING]),
-            Message.sent_at >= start_of_day
+            Message.updated_at >= start_of_day
         ).all()
         
         sent_count = 0
@@ -263,11 +259,11 @@ class MessageService:
     
     # _increment_daily_count is no longer needed as DB updates happen via message status change
     
-    async def _apply_safety_delay(self):
+    async def _apply_safety_delay(self, db: Session, user_id: int):
         """Apply random delay between messages."""
-        min_delay = settings_service.get_setting('min_delay_seconds')
-        max_delay = settings_service.get_setting('max_delay_seconds')
-        delay = random.randint(min_delay, max_delay)
+        min_delay = settings_service.get_setting(db, user_id, 'min_delay_seconds', 10)
+        max_delay = settings_service.get_setting(db, user_id, 'max_delay_seconds', 30)
+        delay = random.randint(int(min_delay), int(max_delay))
         await asyncio.sleep(delay)
 
     async def send_message_to_groups(
@@ -323,13 +319,14 @@ class MessageService:
         skipped_count = 0
 
         # Performance Optimization: Calculate daily sent count ONCE
-        limit = settings_service.get_setting('daily_message_limit', 100)
+        limit = settings_service.get_setting(db, message.user_id, 'daily_message_limit', 100)
         today = datetime.now().date()
         start_of_day = datetime.combine(today, datetime.min.time())
         
         # Count messages sent today from DB (excluding current job if it was part of a previous run)
         # We need to approximate by counting 'sent' statuses in messages updated today.
         messages_today = db.query(Message).filter(
+            Message.user_id == message.user_id,
             Message.status.in_([MessageStatus.SENT, MessageStatus.SENDING]),
             Message.updated_at >= start_of_day,
             Message.id != message_id # Exclude current message from baseline
@@ -470,7 +467,7 @@ class MessageService:
                         message.group_status = current_status
                         db.commit()
                         
-                        await self._apply_safety_delay()
+                        await self._apply_safety_delay(db, message.user_id)
                 else:
                     # Update group stats
                     group.messages_failed += 1

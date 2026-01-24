@@ -162,9 +162,12 @@ function renderMedia(media) {
     card.dataset.id = item.id;
     card.style.animationDelay = `${Math.random() * 0.2}s`;
 
+    const token = localStorage.getItem('access_token');
+    const authQuery = token ? `?token=${token}` : '';
+
     card.innerHTML = `
         <div class="media-card-img-wrapper">
-            <img src="${API_BASE}${item.url}" alt="${item.filename}" loading="lazy">
+            <img src="${API_BASE}${item.url}${authQuery}" alt="${item.filename}" loading="lazy">
             <div class="media-card-overlay">
                 <button class="btn btn-danger btn-sm shadow-lg delete-media-btn" data-id="${item.id}">
                   🗑️ Delete
@@ -353,14 +356,17 @@ export function setupImageSelector() {
       return;
     }
 
+    const token = localStorage.getItem('access_token');
+    const authQuery = token ? `?token=${token}` : '';
+
     gallery.innerHTML = `
       <div class="image-selector-grid">
         ${items
           .map(
             (item) => `
-          <div class="image-selector-item" data-id="${item.id}" data-url="${item.url}">
+          <div class="image-selector-item" data-id="${item.id}" data-url="${item.url}${authQuery}">
             <div class="img-wrapper">
-              <img src="${API_BASE}${item.url}" alt="${item.filename}">
+              <img src="${API_BASE}${item.url}${authQuery}" alt="${item.filename}">
             </div>
             <div class="check-badge">✓</div>
             <div class="image-selector-name">${item.filename}</div>

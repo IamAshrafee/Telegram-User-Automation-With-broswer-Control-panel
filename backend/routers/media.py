@@ -212,9 +212,44 @@ async def upload_media(
     }
 
 
+# Helper dependency for media (accepts token in query)
+from backend.utils.auth import decode_access_token
+from fastapi import Request
+
+async def get_user_for_media(
+    request: Request,
+    token: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    # Try getting from Header first (standard Bearer)
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token")
+        
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+        
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+        
+    return user
+
 @router.get("/{media_id}")
-async def get_media(media_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Get a specific media file."""
+async def get_media(
+    media_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_user_for_media)
+):
+    """Get a specific media file (supports Auth header OR ?token= query param)."""
     media = db.query(Media).filter(
         Media.user_id == current_user.id,
         Media.id == media_id
