@@ -90,13 +90,38 @@ export async function loadTemplate(templateId) {
     const charCount = document.getElementById("charCount");
     if (charCount) charCount.textContent = template.text.length;
 
-    // Update media selection status text
+    // Update media selection status text and preview
     if (template.media_id) {
       const btn = document.getElementById("selectMessageMedia");
       if (btn) btn.textContent = `Image #${template.media_id} selected`;
+
+      const previewContainer = document.getElementById("messageMediaPreview");
+      const previewImg = previewContainer?.querySelector("img");
+      const clearBtn = document.getElementById("clearMessageMedia");
+
+      if (previewContainer && previewImg) {
+        const token = localStorage.getItem("access_token");
+        const authQuery = token ? `?token=${token}` : "";
+        // Assuming template object doesn't have url, we construct it: /media/{id}
+        // Actually template object from backend might not have url if it's just a template record. 
+        // We typically need the Media object.
+        // But for draft, we have media_id.
+        // We can try to guess the URL or we might need to fetch media details?
+        // Wait, normally we select from the gallery which gives us the URL.
+        // If we just have ID, we can try /api/media/{id} which serves the file directly (as per my previous fix!)
+        
+        previewImg.src = `${api.API_BASE}/media/${template.media_id}${authQuery}`;
+        previewContainer.style.display = "block";
+        if (clearBtn) clearBtn.style.display = "block";
+      }
     } else {
       const btn = document.getElementById("selectMessageMedia");
       if (btn) btn.textContent = "🖼️ Select Image";
+      
+      const previewContainer = document.getElementById("messageMediaPreview");
+      const clearBtn = document.getElementById("clearMessageMedia");
+      if (previewContainer) previewContainer.style.display = "none";
+      if (clearBtn) clearBtn.style.display = "none";
     }
 
     showToast(`Template "${template.name}" loaded`, "success");
@@ -108,6 +133,9 @@ export async function loadTemplate(templateId) {
 /**
  * Save current work-in-progress as a draft
  */
+/**
+ * Save current work-in-progress as a draft
+ */
 export function autoSaveDraft() {
   const messageText = document.getElementById("messageText")?.value;
   const messageLink = document.getElementById("messageLink")?.value;
@@ -115,8 +143,14 @@ export function autoSaveDraft() {
   const bulkSendCheck = document.getElementById("bulkSendCheck");
   const bulkPermission = document.getElementById("messageBulkPermission");
 
+  // Show discard button if we have content
+  const discardBtn = document.getElementById("discardDraftBtn");
+  if (discardBtn) {
+      discardBtn.style.display = (messageText || messageLink || messageMedia) ? "inline-block" : "none";
+  }
+
   // Only auto-save if something is present
-  if (!messageText && !messageLink && !messageMedia) return;
+  if (!messageText && !messageLink && !messageMedia) return Promise.resolve();
 
   const draftData = {
     text: messageText || null,
@@ -126,7 +160,7 @@ export function autoSaveDraft() {
     bulk_permission: bulkPermission ? bulkPermission.value : null,
   };
 
-  api
+  return api
     .post("/templates/draft", draftData)
     .then(() => {
       const indicator = document.getElementById("draftIndicator");
@@ -141,11 +175,50 @@ export function autoSaveDraft() {
 }
 
 /**
+ * Discard current draft
+ */
+export async function discardDraft() {
+   if(!confirm("Discard current draft? This cannot be undone.")) return;
+   
+   try {
+       await api.delete("/templates/draft");
+       
+       // Clear inputs
+       document.getElementById("messageText").value = "";
+       document.getElementById("messageLink").value = "";
+       document.getElementById("messageMedia").value = "";
+       
+       const preview = document.getElementById("messageMediaPreview");
+       if (preview) preview.style.display = "none";
+ 
+       const selectBtn = document.getElementById("selectMessageMedia");
+       if (selectBtn) selectBtn.textContent = "🖼️ Select Image";
+       
+       const clearBtn = document.getElementById("clearMessageMedia");
+       if (clearBtn) clearBtn.style.display = "none";
+       
+       const discardBtn = document.getElementById("discardDraftBtn");
+       if (discardBtn) discardBtn.style.display = "none";
+       
+       showToast("Draft discarded", "success");
+   } catch (error) {
+       showToast("Failed to discard draft: " + error.message, "error");
+   }
+}
+
+/**
  * Restore previous session's draft
  */
 export async function loadDraft() {
   try {
     const draft = await api.request("/templates/draft", { silent: true });
+    
+    // Show discard button/hide it
+    const discardBtn = document.getElementById("discardDraftBtn");
+    if (discardBtn) {
+        discardBtn.style.display = draft ? "inline-block" : "none";
+    }
+
     if (!draft) return;
 
     if (draft.text) document.getElementById("messageText").value = draft.text;
@@ -154,6 +227,19 @@ export async function loadDraft() {
       document.getElementById("messageMedia").value = draft.media_id;
       const btn = document.getElementById("selectMessageMedia");
       if (btn) btn.textContent = `Image #${draft.media_id} (Restored)`;
+
+      // Restore Preview
+      const previewContainer = document.getElementById("messageMediaPreview");
+      const previewImg = previewContainer?.querySelector("img");
+      const clearBtn = document.getElementById("clearMessageMedia");
+
+      if (previewContainer && previewImg) {
+        const token = localStorage.getItem("access_token");
+        const authQuery = token ? `?token=${token}` : "";
+        previewImg.src = `${api.API_BASE}/media/${draft.media_id}${authQuery}`;
+        previewContainer.style.display = "block";
+        if (clearBtn) clearBtn.style.display = "block";
+      }
     }
 
     // Restore bulk session state
@@ -194,12 +280,40 @@ export function setupTemplates() {
     });
   }
 
+  const saveDraftBtn = document.getElementById("saveDraftBtn");
+  if (saveDraftBtn) {
+    saveDraftBtn.addEventListener("click", async () => {
+      const originalText = saveDraftBtn.innerHTML;
+      saveDraftBtn.disabled = true;
+      saveDraftBtn.innerHTML = "💾 Saving...";
+      
+      await autoSaveDraft();
+      showToast("Draft saved successfully", "success");
+      
+      setTimeout(() => {
+          saveDraftBtn.disabled = false;
+          saveDraftBtn.innerHTML = originalText;
+      }, 500);
+    });
+  }
+  
+  const discardDraftBtn = document.getElementById("discardDraftBtn");
+  if (discardDraftBtn) {
+      discardDraftBtn.addEventListener("click", discardDraft);
+  }
+
   // Setup auto-save listener
   const messageText = document.getElementById("messageText");
   if (messageText) {
     messageText.addEventListener("input", () => {
       clearTimeout(draftSaveTimer);
       draftSaveTimer = setTimeout(autoSaveDraft, 30000);
+      
+      // Show discard button as soon as user types
+      const discardBtn = document.getElementById("discardDraftBtn");
+      if (discardBtn && messageText.value.trim().length > 0) {
+          discardBtn.style.display = "inline-block";
+      }
     });
   }
 }

@@ -30,6 +30,7 @@
     </style>
     <link rel="stylesheet" href="css/variables.css" />
     <link rel="stylesheet" href="css/animations.css" />
+    <link rel="stylesheet" href="css/composer.css" />
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="stylesheet" href="css/components.css" />
     <link rel="stylesheet" href="css/dashboard.css" />
@@ -328,285 +329,239 @@
 
           <!-- Compose Tab -->
           <div id="composeTab" class="tab-content active">
-            <div class="message-composer">
-              <!-- Template Header -->
-              <div class="template-header">
-                <div class="template-selector">
-                  <select
-                    id="loadTemplateSelect"
-                    class="template-select"
-                    style="min-width: 250px"
-                  >
-                    <option value="">📋 Load Template...</option>
-                  </select>
-                </div>
-                <div class="template-actions">
+            
+            <!-- Master Composer Card -->
+            <div class="composer-card">
+              
+              <!-- Header -->
+              <div class="composer-header">
+                <h3 class="composer-title">
+                  📝 New Message
+                </h3>
+                <div class="composer-actions">
                   <span
                     id="draftIndicator"
-                    class="draft-indicator badge"
+                    class="badge"
                     style="
-                      background: var(--slate-100);
-                      color: var(--text-secondary);
+                      background: var(--success-100);
+                      color: var(--success-700);
                       display: none;
+                      font-size: 0.8rem;
                     "
                   >
-                    📝 Draft Saved
+                    Draft Saved
                   </span>
-                  <button id="saveTemplateBtn" class="btn btn-secondary btn-sm">
-                    💾 Save as Template
+                  
+                  <div class="template-selector">
+                      <select
+                        id="loadTemplateSelect"
+                        class="template-select"
+                        style="min-width: 180px; font-size: 0.9rem; padding: 6px 12px;"
+                      >
+                        <option value="">📋 Load Template...</option>
+                      </select>
+                  </div>
+
+                  <button 
+                    id="discardDraftBtn" 
+                    class="btn btn-outline-danger btn-sm" 
+                    style="display: none;"
+                    title="Clear current draft"
+                  >
+                    ✕
+                  </button>
+                  <button id="saveDraftBtn" class="btn btn-secondary btn-sm" title="Save Draft">
+                    💾
+                  </button>
+                  <button id="saveTemplateBtn" class="btn btn-secondary btn-sm" title="Save as Template">
+                    📑
                   </button>
                 </div>
               </div>
 
-              <div class="composer-grid">
-                <!-- Left Column: Content -->
-                <div class="composer-main">
-                  <div class="form-group">
-                    <label for="messageText">Message Content *</label>
+              <!-- Body -->
+              <div class="composer-body">
+                
+                <!-- Content Area -->
+                <div class="form-group mb-0">
+                  <label for="messageText" style="display:none">Message Content</label>
+                  <div class="composer-textarea-wrapper">
                     <textarea
                       id="messageText"
                       rows="8"
-                      placeholder="Type your message here..."
-                      style="font-family: inherit; line-height: 1.6"
+                      placeholder="What would you like to say? Type your message here..."
                     ></textarea>
                     
-                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 5px; background: var(--bg-secondary); padding: 8px; border-radius: 6px;">
-                        <strong>💡 Smart Variables:</strong> 
+                    <div class="smart-vars">
                         <span class="badge badge-variable" title="Current Group Name">{group_name}</span>
-                        <span class="badge badge-variable" title="Current Date (YYYY-MM-DD)">{date}</span>
-                        <span class="badge badge-variable" title="Current Time (HH:MM)">{time}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mt-2">
-                      <span class="char-count"
-                        ><span id="charCount">0</span> chars</span
-                      >
-                      <button
-                        type="button"
-                        id="previewMessageBtn"
-                        class="btn btn-secondary btn-sm"
-                      >
-                        👁️ Preview
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="form-group">
-                    <div style="display: flex; align-items: center">
-                      <span class="input-icon">🔗</span>
-                      <label for="messageLink"
-                        >Attachment Link (Optional)</label
-                      >
-                    </div>
-
-                    <div class="input-group">
-                      <input
-                        type="url"
-                        id="messageLink"
-                        placeholder="https://example.com"
-                        style="padding-left: 2.5rem"
-                      />
-                    </div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Media Attachment (Optional)</label>
-                    <input type="hidden" id="messageMedia" />
-                    <div
-                      class="media-input-wrapper"
-                      style="display: flex; gap: 10px"
-                    >
-                      <button
-                        type="button"
-                        id="selectMessageMedia"
-                        class="btn btn-secondary"
-                        style="flex: 1"
-                      >
-                        🖼️ Select Image
-                      </button>
-                      <button
-                        type="button"
-                        id="clearMessageMedia"
-                        class="btn btn-outline-danger"
-                        style="display: none"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <!-- Selected Image Preview -->
-                    <div
-                      id="messageMediaPreview"
-                      class="media-preview-container mt-3"
-                      style="display: none"
-                    >
-                      <div style="position: relative; display: inline-block">
-                        <img
-                          src=""
-                          alt="Selected Media"
-                          style="
-                            max-height: 120px;
-                            border-radius: 8px;
-                            border: 1px solid var(--slate-200);
-                            box-shadow: var(--shadow-sm);
-                          "
-                        />
-                      </div>
+                        <span class="badge badge-variable" title="Current Date">{date}</span>
+                        <span class="badge badge-variable" title="Current Time">{time}</span>
+                        <span class="char-count" style="margin-left: auto; font-size: 0.8rem; color: var(--slate-400);">
+                             <span id="charCount">0</span> chars
+                        </span>
                     </div>
                   </div>
                 </div>
 
-                <!-- Right Column: Targeting & Sending -->
-                <div class="composer-sidebar">
-                  <div
-                    class="card p-4"
-                    style="
-                      background: var(--slate-50);
-                      border: 1px solid var(--slate-200);
-                    "
-                  >
-                    <h4
-                      class="mb-3"
-                      style="
-                        font-size: var(--text-sm);
-                        text-transform: uppercase;
-                      "
-                    >
-                      🎯 Targeting & Schedule
-                    </h4>
-
-                    <!-- Schedule Toggle -->
-                    <div class="form-group mb-4">
-                      <label
-                        class="checkbox-label"
-                        style="
-                          display: flex;
-                          gap: 8px;
-                          cursor: pointer;
-                          align-items: center;
-                        "
-                      >
-                        <input
-                          type="checkbox"
-                          id="scheduleCheck"
-                          style="width: 18px; height: 18px"
-                        />
-                        <span style="font-weight: 600">Schedule for Later</span>
-                      </label>
-                    </div>
-
-                    <div
-                      id="scheduleTimeGroup"
-                      class="form-group mb-4"
-                      style="display: none; animation: fadeIn 0.3s ease"
-                    >
-                      <label for="scheduleDateTime">Date & Time *</label>
-                      <input
-                        type="datetime-local"
-                        id="scheduleDateTime"
-                        style="
-                          width: 100%;
-                          font-size: 1rem;
-                          padding: 10px;
-                          border: 1px solid var(--color-border);
-                          border-radius: 6px;
-                          margin-bottom: 10px;
-                        "
+                <!-- Attachments Grid -->
+                <div class="composer-attachments">
+                  <!-- Link Input -->
+                  <div class="attachment-box">
+                    <span class="attachment-icon">🔗</span>
+                    <input
+                        type="url"
+                        id="messageLink"
+                        class="minimal-input"
+                        placeholder="Add a link (https://...)"
                       />
-                      
-                      <!-- Recurrence Options -->
-                      <div class="mt-2" style="border-top: 1px dashed var(--slate-200); padding-top: 10px;">
-                          <label style="font-size: 0.9rem; margin-bottom: 5px;">🔁 Repeat</label>
-                          <select id="recurrenceType" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-border); margin-bottom: 8px;">
-                              <option value="once">No Repeat (Once)</option>
-                              <option value="daily">Daily</option>
-                              <option value="weekly">Weekly</option>
-                              <option value="custom">Custom Interval</option>
-                          </select>
-                          
-                          <div id="recurrenceCustomGroup" style="display: none; margin-bottom: 8px;">
-                              <div style="display: flex; align-items: center; gap: 8px;">
-                                  <input type="number" id="recurrenceInterval" min="1" placeholder="Every X minutes" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--color-border);">
-                                  <span style="font-size: 0.85rem; color: var(--text-secondary);">minutes</span>
-                              </div>
-                          </div>
-                          
-                          <div id="recurrenceEndGroup" style="display: none;">
-                              <label style="font-size: 0.85rem; margin-bottom: 2px;">End Date (Optional)</label>
-                              <input type="datetime-local" id="recurrenceEndDate" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-border);">
-                          </div>
-                      </div>
-                    </div>
-
-                    <div class="form-group mb-4">
-                      <label
-                        class="checkbox-label"
-                        style="
-                          display: flex;
-                          gap: 8px;
-                          cursor: pointer;
-                          align-items: center;
-                        "
+                  </div>
+                  
+                  <!-- Media Input -->
+                  <div class="attachment-box" style="position: relative;">
+                     <span class="attachment-icon">🖼️</span>
+                     <input type="hidden" id="messageMedia" />
+                     <button
+                        type="button"
+                        id="selectMessageMedia"
+                        class="minimal-input"
+                        style="text-align: left; cursor: pointer; color: var(--slate-600);"
                       >
-                        <input
-                          type="checkbox"
-                          id="bulkSendCheck"
-                          style="width: 18px; height: 18px"
-                        />
-                        <span style="font-weight: 600">Bulk Send Mode</span>
-                      </label>
-                      <p class="text-sm text-muted ml-4">
-                        Send to all groups matching a permission.
-                      </p>
-                    </div>
+                        Select Image/Media
+                      </button>
+                      
+                      <!-- Mini Preview -->
+                      <div id="messageMediaPreview" class="media-preview-mini">
+                          <img src="" alt="Preview" class="preview-img-card" />
+                      </div>
+                      
+                      <button
+                        type="button"
+                        id="clearMessageMedia"
+                        style="display: none; position: absolute; right: -10px; top: -10px; background: white; border: 1px solid #eee; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; color: red;"
+                      >
+                        ✕
+                      </button>
+                  </div>
+                </div>
 
-                    <div
-                      id="bulkPermissionGroup"
-                      class="form-group"
-                      style="display: none"
-                    >
-                      <label>Permission Type</label>
-                      <select id="messageBulkPermission">
-                        <option value="">Choose type...</option>
-                        <option value="all">All Content</option>
-                        <option value="text_only">Text Only</option>
-                        <option value="text_link">Text + Link</option>
-                        <option value="text_image">Text + Image</option>
-                        <option value="text_link_image">
-                          Text + Link + Image
-                        </option>
-                      </select>
-                    </div>
+                <div class="text-right mt-2">
+                     <button
+                        type="button"
+                        id="previewMessageBtn"
+                        class="btn btn-ghost btn-sm"
+                        style="color: var(--primary-600);"
+                      >
+                        👁️ Preview Appearance
+                      </button>
+                </div>
 
-                    <div id="individualGroupsGroup" class="form-group">
-                      <label>Target Groups</label>
+                <!-- Targeting & Schedule (Unified) -->
+                <div class="composer-targeting">
+                  
+                  <div class="targeting-header">
+                      <span class="targeting-title">🎯 Targeting & Delivery</span>
+                      
+                      <div class="targeting-toggle">
+                         <div class="form-check form-switch" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                            <input class="form-check-input" type="checkbox" id="bulkSendCheck" style="cursor: pointer;">
+                            <label class="form-check-label" for="bulkSendCheck" style="cursor: pointer; font-size: 0.9rem;">
+                               Bulk Send Mode
+                            </label>
+                         </div>
+                      </div>
+                  </div>
+
+                  <!-- Individual Groups (Default) -->
+                  <div id="individualGroupsGroup" class="form-group mb-3">
+                      <label style="font-size: 0.9rem; color: var(--slate-600); margin-bottom: 8px; display: block;">Select Target Groups</label>
                       <div
                         id="groupSelector"
                         class="group-selector"
                         style="
-                          max-height: 200px;
+                          max-height: 180px;
                           overflow-y: auto;
-                          background: white;
-                          padding: 10px;
-                          border: 1px solid var(--color-border);
-                          border-radius: 6px;
+                          background: #ffffff;
+                          padding: 12px;
+                          border: 1px solid var(--slate-200);
+                          border-radius: 12px;
                         "
                       >
                         <!-- Populated by JS -->
                       </div>
-                    </div>
                   </div>
 
-                  <button
-                    id="sendMessageBtn"
-                    class="btn btn-primary btn-large shadow-lg"
-                  >
-                    🚀 Send Message Now
-                  </button>
+                  <!-- Bulk Options (Hidden by default) -->
+                  <div id="bulkPermissionGroup" class="form-group mb-3" style="display: none">
+                      <label>Select Groups by Permission</label>
+                      <select id="messageBulkPermission" class="form-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--slate-300);">
+                        <option value="">Choose permission type...</option>
+                        <option value="all">All Content</option>
+                        <option value="text_only">Text Only</option>
+                        <option value="text_link">Text + Link</option>
+                        <option value="text_image">Text + Image</option>
+                        <option value="text_link_image">Text + Link + Image</option>
+                      </select>
+                  </div>
+
+                  <!-- Schedule Options -->
+                  <div class="schedule-section mt-4 pt-4 border-top">
+                      <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="scheduleCheck">
+                        <label class="form-check-label" for="scheduleCheck">📅 Schedule for Later</label>
+                      </div>
+
+                      <div id="scheduleTimeGroup" class="expandable-section" style="display: none;">
+                          <div class="row" style="display: flex; gap: 20px;">
+                              <div style="flex: 1;">
+                                  <label style="font-size: 0.85rem;">Date & Time</label>
+                                  <input type="datetime-local" id="scheduleDateTime" class="form-control" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--slate-300);">
+                              </div>
+                              <div style="flex: 1;">
+                                  <label style="font-size: 0.85rem;">Recurrence</label>
+                                  <select id="recurrenceType" class="form-select" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--slate-300);">
+                                      <option value="once">No Repeat (Once)</option>
+                                      <option value="daily">Daily</option>
+                                      <option value="weekly">Weekly</option>
+                                      <option value="custom">Custom Interval</option>
+                                  </select>
+                              </div>
+                          </div>
+                          
+                          <!-- Custom Recurrence Details -->
+                          <div id="recurrenceCustomGroup" class="mt-3" style="display: none;">
+                               <div style="display: flex; gap: 10px; align-items: center;">
+                                   <span style="font-size: 0.9rem;">Every</span>
+                                   <input type="number" id="recurrenceInterval" min="1" placeholder="30" style="width: 80px; padding: 6px; border-radius: 6px; border: 1px solid var(--slate-300);">
+                                   <span style="font-size: 0.9rem;">minutes</span>
+                               </div>
+                          </div>
+                          <div id="recurrenceEndGroup" class="mt-3" style="display: none;">
+                               <label style="font-size: 0.85rem;">End Date (Optional)</label>
+                               <input type="datetime-local" id="recurrenceEndDate" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--slate-300);">
+                          </div>
+                      </div>
+                  </div>
+                
                 </div>
               </div>
-              
-              <!-- Embedded Progress Widget -->
-              <div id="embedded-progress-container" class="mt-6"></div>
+
+              <!-- Footer -->
+              <div class="composer-footer">
+                 <div style="font-size: 0.9rem; color: var(--slate-500);">
+                     <!-- Place for status info -->
+                 </div>
+                 <button
+                    id="sendMessageBtn"
+                    class="btn btn-primary"
+                 >
+                    🚀 Send Message Now
+                 </button>
+              </div>
+            
             </div>
+            
+            <!-- Hidden Progress Widget Container (Using global fixed widget instead usually, but keeping ID for safety) -->
+            <div id="embedded-progress-container" style="display: none;"></div>
           </div>
 
           <!-- History Tab -->

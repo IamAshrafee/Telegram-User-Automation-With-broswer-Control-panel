@@ -1,5 +1,5 @@
 import { api } from "./api.js";
-import { showToast, confirmAction } from "./ui-components.js";
+import { showToast, confirmAction, showCustomModal } from "./ui-components.js";
 import { formatDate, capitalize } from "./utils.js";
 import { progressWidget } from "./progress-widget.js";
 
@@ -23,9 +23,15 @@ export function setupMessages() {
     "individualGroupsGroup",
   );
   const refreshScheduledBtn = document.getElementById("refreshScheduledBtn");
+  
+  const previewBtn = document.getElementById("previewMessageBtn");
 
   if (sendMessageBtn)
     sendMessageBtn.addEventListener("click", handleSendMessage);
+
+  if (previewBtn) {
+    previewBtn.addEventListener("click", handlePreview);
+  }
 
   if (scheduleCheck) {
     scheduleCheck.addEventListener("change", (e) => {
@@ -187,6 +193,10 @@ async function handleSendMessage() {
       if (selectBtn) selectBtn.textContent = "🖼️ Select Image";
       const clearBtn = document.getElementById("clearMessageMedia");
       if (clearBtn) clearBtn.style.display = "none";
+      
+      // Hide discard button if visible
+      const discardBtn = document.getElementById("discardDraftBtn");
+      if (discardBtn) discardBtn.style.display = "none";
     }
 
     if (isScheduled) await loadScheduledJobs();
@@ -525,3 +535,75 @@ const retryMessage = async (messageId) => {
     showToast("Failed to retry: " + error.message, "error");
   }
 };
+
+/**
+ * Handle Preview Button Click
+ * Simulates Telegram message appearance
+ */
+function handlePreview() {
+  const text = document.getElementById("messageText").value;
+  const link = document.getElementById("messageLink").value;
+  const mediaPreviewImg = document.getElementById("messageMediaPreview").querySelector("img");
+  const hasMedia = mediaPreviewImg && mediaPreviewImg.src && document.getElementById("messageMediaPreview").style.display !== "none";
+
+  if (!text && !link && !hasMedia) {
+      showToast("Enter some content to preview", "info");
+      return;
+  }
+
+  // Telegram-style Preview HTML
+  let contentHtml = `
+    <div style="background: #e4e4e4; padding: 20px; border-radius: 8px; font-family: 'Inter', sans-serif;">
+       <div style="max-width: 350px; background: white; border-radius: 12px 12px 12px 0; padding: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.1); margin: 0 auto; overflow: hidden;">
+  `;
+
+  // 1. Media
+  if (hasMedia) {
+      contentHtml += `
+        <div style="width: 100%; height: 180px; overflow: hidden; background: #f0f0f0;">
+           <img src="${mediaPreviewImg.src}" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+        </div>
+      `;
+  }
+
+  // 2. Text (with highlighting variables)
+  if (text) {
+      // Highlight variables
+      let formattedText = text
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/\n/g, "<br>")
+         .replace(/(\{group_name\}|\{date\}|\{time\})/g, '<span style="color: #6366f1; background: #eef2ff; border-radius: 3px; padding: 0 2px;">$1</span>');
+
+      contentHtml += `
+         <div style="padding: 10px 14px; color: #000; font-size: 15px; line-height: 1.4;">
+            ${formattedText}
+         </div>
+      `;
+  }
+
+  // 3. Link Preview (Placeholder)
+  if (link) {
+      contentHtml += `
+         <div style="border-left: 3px solid #6366f1; background: #f8fafc; margin: 0 14px 10px 14px; padding: 8px 10px;">
+             <div style="color: #6366f1; font-weight: 500; font-size: 13px;">${link}</div>
+             <div style="font-weight: 600; font-size: 13px; margin-top: 2px;">Link Title Mockup</div>
+             <div style="font-size: 12px; color: #64748b; margin-top: 2px;">This is a simulated link preview card</div>
+         </div>
+      `;
+  }
+  
+  // Footer (Time)
+  contentHtml += `
+         <div style="padding: 0 14px 8px 14px; text-align: right;">
+             <span style="font-size: 11px; color: #94a3b8;">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+         </div>
+       </div>
+       <div style="text-align: center; margin-top: 15px; color: #64748b; font-size: 12px;">
+          Note: This is an approximation. Actual rendering depends on Telegram clients.
+       </div>
+    </div>
+  `;
+
+  showCustomModal("Telegram Preview", contentHtml, [{id: "close", text: "Close", class: "btn-primary"}]);
+}

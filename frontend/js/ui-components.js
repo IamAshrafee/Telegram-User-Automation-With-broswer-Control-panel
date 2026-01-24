@@ -185,6 +185,59 @@ export function confirmAction(message, options = {}) {
   });
 }
 
+// Generic Modal (for custom content like previews)
+export function showCustomModal(title, contentHtml, buttons = []) {
+  const modal = document.createElement("div");
+  modal.className = "confirm-modal-overlay";
+  
+  // Generate buttons HTML
+  const buttonsHtml = buttons.map(btn => 
+      `<button class="btn ${btn.class || 'btn-secondary'} modal-btn-${btn.id}">${btn.text}</button>`
+  ).join("");
+
+  modal.innerHTML = `
+    <div class="confirm-modal" style="max-width: 500px; width: 90%;">
+      <div class="confirm-modal-header">
+        <h3>${title}</h3>
+        <button class="modal-close-icon" style="background:none; border:none; cursor:pointer; font-size:1.2rem;">×</button>
+      </div>
+      <div class="confirm-modal-body" style="padding: 20px;">
+        ${contentHtml}
+      </div>
+      <div class="confirm-modal-footer">
+        ${buttonsHtml}
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  setTimeout(() => modal.classList.add("confirm-modal-show"), 10);
+
+  const close = () => {
+    modal.classList.remove("confirm-modal-show");
+    setTimeout(() => modal.remove(), 300);
+  };
+
+  modal.querySelector(".modal-close-icon").addEventListener("click", close);
+  
+  // Bind button events
+  buttons.forEach(btn => {
+      const btnEl = modal.querySelector(`.modal-btn-${btn.id}`);
+      if (btnEl) {
+          btnEl.addEventListener("click", () => {
+              if (btn.onClick) btn.onClick(close);
+              else close();
+          });
+      }
+  });
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) close();
+  });
+  
+  return modal;
+}
+
 // Loading Spinner
 export function showLoading(element, text = "Loading...") {
   const spinner = document.createElement("div");
