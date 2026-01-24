@@ -249,16 +249,7 @@ async def preview_message(
     """Preview message with actual group data (first 3 groups)"""
     try:
         from backend.utils.message_validators import estimate_send_time, format_time_estimate
-        
-        # Try to import text_processor, if it doesn't exist, use simple processing
-        try:
-            from backend.utils.text_processor import process_content
-        except ImportError:
-            # Fallback: simple variable replacement
-            def process_content(text, context):
-                for key, value in context.items():
-                    text = text.replace(key, str(value))
-                return text
+        from backend.utils.text_processor import process_content
         
         previews = []
         target_groups = message_data.target_groups[:3]  # Preview first 3 groups

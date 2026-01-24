@@ -11,6 +11,7 @@ from backend.services.telegram_client import telegram_service
 from backend.utils.validators import validate_content_for_group
 from backend.services import settings_service
 from backend.utils.logger import setup_logger
+from backend.utils.text_processor import process_content
 
 logger = setup_logger(__name__)
 
@@ -424,9 +425,18 @@ class MessageService:
             
             # Send message
             try:
+                # Process Smart Variables
+                context = {
+                    "{group_name}": group.title,
+                    "{group_id}": str(group.id),
+                    "{date}": datetime.now().strftime("%Y-%m-%d"),
+                    "{time}": datetime.now().strftime("%H:%M"),
+                }
+                final_text = process_content(message.text, context)
+
                 success = await telegram_service.send_message(
                     group.telegram_id,
-                    message.text,
+                    final_text,
                     message.link,
                     media_path
                 )

@@ -620,3 +620,33 @@ body > .progress-widget {
   font-size: 0.75rem;
   margin-left: auto;
 }
+
+/* -----------------------------
+   Badges
+----------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2em 0.6em;
+  font-size: 0.75em;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25rem;
+  background-color: var(--color-primary);
+}
+
+.badge-variable {
+  background-color: var(--slate-200);
+  color: var(--slate-700);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  margin-right: 4px;
+  border: 1px solid var(--slate-300);
+  cursor: help;
+}
