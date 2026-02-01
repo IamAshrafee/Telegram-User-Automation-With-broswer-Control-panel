@@ -23,7 +23,7 @@ export function setupMessages() {
     "individualGroupsGroup",
   );
   const refreshScheduledBtn = document.getElementById("refreshScheduledBtn");
-  
+
   const previewBtn = document.getElementById("previewMessageBtn");
 
   if (sendMessageBtn)
@@ -56,17 +56,17 @@ export function setupMessages() {
   const recurrenceTypeSelect = document.getElementById("recurrenceType");
   const recurrenceCustomGroup = document.getElementById("recurrenceCustomGroup");
   const recurrenceEndGroup = document.getElementById("recurrenceEndGroup");
-  
+
   if (recurrenceTypeSelect) {
-      recurrenceTypeSelect.addEventListener("change", (e) => {
-          const type = e.target.value;
-          if (recurrenceCustomGroup) {
-              recurrenceCustomGroup.style.display = type === "custom" ? "block" : "none";
-          }
-          if (recurrenceEndGroup) {
-              recurrenceEndGroup.style.display = type !== "once" ? "block" : "none";
-          }
-      });
+    recurrenceTypeSelect.addEventListener("change", (e) => {
+      const type = e.target.value;
+      if (recurrenceCustomGroup) {
+        recurrenceCustomGroup.style.display = type === "custom" ? "block" : "none";
+      }
+      if (recurrenceEndGroup) {
+        recurrenceEndGroup.style.display = type !== "once" ? "block" : "none";
+      }
+    });
   }
 
   // Setup list delegation
@@ -140,24 +140,24 @@ async function handleSendMessage() {
 
     if (isScheduled) {
       payload.scheduled_at = new Date(scheduleTime).toISOString();
-      
+
       const recurrenceType = document.getElementById("recurrenceType").value;
       payload.recurrence_type = recurrenceType;
-      
+
       if (recurrenceType === "custom") {
-          const interval = parseInt(document.getElementById("recurrenceInterval").value);
-          if (!interval || interval < 1) {
-              showToast("Please enter a valid recurrence interval (minutes)", "error");
-              btn.disabled = false;
-              btn.textContent = "📅 Schedule Message";
-              return;
-          }
-          payload.recurrence_interval = interval;
+        const interval = parseInt(document.getElementById("recurrenceInterval").value);
+        if (!interval || interval < 1) {
+          showToast("Please enter a valid recurrence interval (minutes)", "error");
+          btn.disabled = false;
+          btn.textContent = "📅 Schedule Message";
+          return;
+        }
+        payload.recurrence_interval = interval;
       }
-      
+
       const endDate = document.getElementById("recurrenceEndDate").value;
       if (endDate) {
-          payload.recurrence_end_date = new Date(endDate).toISOString();
+        payload.recurrence_end_date = new Date(endDate).toISOString();
       }
     }
 
@@ -193,7 +193,7 @@ async function handleSendMessage() {
       if (selectBtn) selectBtn.textContent = "🖼️ Select Image";
       const clearBtn = document.getElementById("clearMessageMedia");
       if (clearBtn) clearBtn.style.display = "none";
-      
+
       // Hide discard button if visible
       const discardBtn = document.getElementById("discardDraftBtn");
       if (discardBtn) discardBtn.style.display = "none";
@@ -265,7 +265,7 @@ function renderScheduledJobs(jobs) {
     meta.innerHTML = `
         <span>📅 ${formatDate(job.scheduled_at)}</span>
         <span>${job.recurrence_type && job.recurrence_type !== 'once' ? '🔁 ' + capitalize(job.recurrence_type) : ''}</span>
-        <span>🎯 ${job.is_bulk ? "Bulk: " + job.permission_type : job.group_count + " groups"}</span>
+        <span>🎯 ${job.is_bulk ? "Bulk: " + job.permission_type : (job.target_groups ? job.target_groups.length : 0) + " groups"}</span>
     `;
 
     infoDiv.appendChild(p);
@@ -547,8 +547,8 @@ function handlePreview() {
   const hasMedia = mediaPreviewImg && mediaPreviewImg.src && document.getElementById("messageMediaPreview").style.display !== "none";
 
   if (!text && !link && !hasMedia) {
-      showToast("Enter some content to preview", "info");
-      return;
+    showToast("Enter some content to preview", "info");
+    return;
   }
 
   // Telegram-style Preview HTML
@@ -559,7 +559,7 @@ function handlePreview() {
 
   // 1. Media
   if (hasMedia) {
-      contentHtml += `
+    contentHtml += `
         <div style="width: 100%; height: 180px; overflow: hidden; background: #f0f0f0;">
            <img src="${mediaPreviewImg.src}" style="width: 100%; height: 100%; object-fit: cover; display: block;">
         </div>
@@ -568,14 +568,14 @@ function handlePreview() {
 
   // 2. Text (with highlighting variables)
   if (text) {
-      // Highlight variables
-      let formattedText = text
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/\n/g, "<br>")
-         .replace(/(\{group_name\}|\{date\}|\{time\})/g, '<span style="color: #6366f1; background: #eef2ff; border-radius: 3px; padding: 0 2px;">$1</span>');
+    // Highlight variables
+    let formattedText = text
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\n/g, "<br>")
+      .replace(/(\{group_name\}|\{date\}|\{time\})/g, '<span style="color: #6366f1; background: #eef2ff; border-radius: 3px; padding: 0 2px;">$1</span>');
 
-      contentHtml += `
+    contentHtml += `
          <div style="padding: 10px 14px; color: #000; font-size: 15px; line-height: 1.4;">
             ${formattedText}
          </div>
@@ -584,7 +584,7 @@ function handlePreview() {
 
   // 3. Link Preview (Placeholder)
   if (link) {
-      contentHtml += `
+    contentHtml += `
          <div style="border-left: 3px solid #6366f1; background: #f8fafc; margin: 0 14px 10px 14px; padding: 8px 10px;">
              <div style="color: #6366f1; font-weight: 500; font-size: 13px;">${link}</div>
              <div style="font-weight: 600; font-size: 13px; margin-top: 2px;">Link Title Mockup</div>
@@ -592,11 +592,11 @@ function handlePreview() {
          </div>
       `;
   }
-  
+
   // Footer (Time)
   contentHtml += `
          <div style="padding: 0 14px 8px 14px; text-align: right;">
-             <span style="font-size: 11px; color: #94a3b8;">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+             <span style="font-size: 11px; color: #94a3b8;">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
          </div>
        </div>
        <div style="text-align: center; margin-top: 15px; color: #64748b; font-size: 12px;">
@@ -605,5 +605,5 @@ function handlePreview() {
     </div>
   `;
 
-  showCustomModal("Telegram Preview", contentHtml, [{id: "close", text: "Close", class: "btn-primary"}]);
+  showCustomModal("Telegram Preview", contentHtml, [{ id: "close", text: "Close", class: "btn-primary" }]);
 }

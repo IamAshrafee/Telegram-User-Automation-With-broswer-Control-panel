@@ -234,7 +234,7 @@ class MessageService:
         """
         Check if daily message limit has been reached by counting actual DB records.
         """
-        limit = settings_service.get_setting(db, user_id, 'daily_message_limit', 100)
+        limit = int(settings_service.get_setting(db, user_id, 'daily_message_limit', 100))
         
         # Calculate start of today (local server time)
         today = datetime.now().date()
@@ -319,7 +319,7 @@ class MessageService:
         skipped_count = 0
 
         # Performance Optimization: Calculate daily sent count ONCE
-        limit = settings_service.get_setting(db, message.user_id, 'daily_message_limit', 100)
+        limit = int(settings_service.get_setting(db, message.user_id, 'daily_message_limit', 100))
         today = datetime.now().date()
         start_of_day = datetime.combine(today, datetime.min.time())
         
