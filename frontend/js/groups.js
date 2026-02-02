@@ -328,30 +328,73 @@ function renderGroups(groups, append = false) {
       titleContainer.textContent = group.title;
     }
 
-    // Badges Logic
+    // 🎨 ENHANCED BADGES - Organized by Priority
     let badgesHtml = "";
+
+    // PRIORITY 1: Security Warnings (CRITICAL - Show first!)
+    if (group.is_scam) {
+      badgesHtml += `<span class="badge badge-danger badge-pulse" title="⚠️ Flagged as Scam by Telegram">🚨 SCAM</span>`;
+    }
+    if (group.is_fake) {
+      badgesHtml += `<span class="badge badge-danger badge-pulse" title="⚠️ Flagged as Fake/Impersonator">⚠️ FAKE</span>`;
+    }
+
+    // PRIORITY 2: Admin Status
     if (group.is_admin) {
-      badgesHtml += `<span class="badge badge-warning" title="You are an Admin">👑 Admin</span>`;
+      badgesHtml += `<span class="badge badge-gold" title="You are an Admin">👑 Admin</span>`;
     }
+
+    // PRIORITY 3: Activity Indicators
     if (group.slow_mode_delay > 0) {
-      badgesHtml += `<span class="badge badge-info" title="Slow Mode Active">⏳ ${group.slow_mode_delay}s</span>`;
+      badgesHtml += `<span class="badge badge-info" title="Slow Mode: ${group.slow_mode_delay}s delay between messages">⏳ ${group.slow_mode_delay}s</span>`;
     }
-    if (group.has_media_restriction) {
-      badgesHtml += `<span class="badge badge-danger" title="Sending Media Banned">🚫 Media</span>`;
+    if (group.unread_count > 0) {
+      badgesHtml += `<span class="badge badge-primary" title="${group.unread_count} Unread Messages">💬 ${group.unread_count}</span>`;
     }
-    if (group.has_link_restriction) {
-      badgesHtml += `<span class="badge badge-danger" title="Embedding Links Banned">🚫 Links</span>`;
-    }
+
+    // 🔐 PERMISSION GRID - Visual representation of all 5 permissions
+    const permissionGrid = `
+      <div class="permission-grid" title="What you can send in this group">
+        <div class="permission-item ${group.can_send_messages ? 'allowed' : 'restricted'}">
+          <span class="perm-icon">${group.can_send_messages ? '✅' : '❌'}</span>
+          <span class="perm-label">Msg</span>
+        </div>
+        <div class="permission-item ${group.can_send_media ? 'allowed' : 'restricted'}">
+          <span class="perm-icon">${group.can_send_media ? '✅' : '❌'}</span>
+          <span class="perm-label">Media</span>
+        </div>
+        <div class="permission-item ${group.can_embed_links ? 'allowed' : 'restricted'}">
+          <span class="perm-icon">${group.can_embed_links ? '✅' : '❌'}</span>
+          <span class="perm-label">Links</span>
+        </div>
+        <div class="permission-item ${group.can_send_polls ? 'allowed' : 'restricted'}">
+          <span class="perm-icon">${group.can_send_polls ? '✅' : '❌'}</span>
+          <span class="perm-label">Polls</span>
+        </div>
+        <div class="permission-item ${group.can_send_stickers ? 'allowed' : 'restricted'}">
+          <span class="perm-icon">${group.can_send_stickers ? '✅' : '❌'}</span>
+          <span class="perm-label">Sticker</span>
+        </div>
+      </div>
+    `;
 
     // Member Count Formatting
     const memberCount = group.member_count
       ? new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short" }).format(group.member_count)
       : "Unknown";
 
+    // 📸 Group Photo Avatar
+    // For now, using emoji placeholder - in future, can fetch actual Telegram photo
+    const hasPhoto = group.has_photo || false;
+    const avatarHtml = hasPhoto
+      ? `<div class="group-avatar" title="Group has profile photo">📷</div>`
+      : `<div class="group-avatar placeholder" title="No profile photo">${group.title.charAt(0).toUpperCase()}</div>`;
+
     card.innerHTML = `
         <div class="group-header-compact">
             <div class="header-main">
                 <input type="checkbox" class="group-checkbox" data-id="${group.id}">
+                ${avatarHtml}
                 <div class="title-section">
                     <div class="title-row">
                         ${titleContainer.outerHTML}
@@ -373,6 +416,8 @@ function renderGroups(groups, append = false) {
             ${badgesHtml}
         </div>
 
+        ${permissionGrid}
+
         <div class="group-stats-compact">
              <div class="stat-pill" title="Messages Sent">
                 <span class="icon">💬</span> ${group.messages_sent || 0}
@@ -387,12 +432,13 @@ function renderGroups(groups, append = false) {
 
         <div class="group-actions-compact">
              <select class="form-control form-control-xs permission-select" data-id="${group.id}">
-                <option value="all" ${group.permission_type === "all" ? "selected" : ""}>Allowed: All</option>
-                <option value="text_only" ${group.permission_type === "text_only" ? "selected" : ""}>Allowed: Text</option>
-                <option value="text_link" ${group.permission_type === "text_link" ? "selected" : ""}>Allowed: Text+Link</option>
-                <option value="text_image" ${group.permission_type === "text_image" ? "selected" : ""}>Allowed: Text+Img</option>
-                <option value="text_link_image" ${group.permission_type === "text_link_image" ? "selected" : ""}>Allowed: All</option>
+                <option value="all" ${group.permission_type === "all" ? "selected" : ""}>✅ All Content</option>
+                <option value="text_only" ${group.permission_type === "text_only" ? "selected" : ""}>💬 Text Only</option>
+                <option value="text_link" ${group.permission_type === "text_link" ? "selected" : ""}>🔗 Text + Link</option>
+                <option value="text_image" ${group.permission_type === "text_image" ? "selected" : ""}>🖼️ Text + Image</option>
+                <option value="text_link_image" ${group.permission_type === "text_link_image" ? "selected" : ""}>🎯 Text + Link + Image</option>
             </select>
+
             <button class="btn-icon delete-group-btn" data-id="${group.id}" title="Remove Group">🗑️</button>
         </div>
     `;

@@ -115,8 +115,22 @@ async def sync_groups(
             existing.username = tg_group.get("username")
             existing.is_admin = tg_group.get("is_admin", False)
             existing.slow_mode_delay = tg_group.get("slow_mode_delay", 0)
-            existing.has_media_restriction = tg_group.get("has_media_restriction", False)
-            existing.has_link_restriction = tg_group.get("has_link_restriction", False)
+            
+            # Update permission flags
+            existing.can_send_messages = tg_group.get("can_send_messages", True)
+            existing.can_send_media = tg_group.get("can_send_media", True)
+            existing.can_embed_links = tg_group.get("can_embed_links", True)
+            existing.can_send_polls = tg_group.get("can_send_polls", True)
+            existing.can_send_stickers = tg_group.get("can_send_stickers", True)
+            
+            # Update security flags
+            existing.is_scam = tg_group.get("is_scam", False)
+            existing.is_fake = tg_group.get("is_fake", False)
+            
+            # Update group characteristics
+            existing.is_megagroup = tg_group.get("is_megagroup", False)
+            existing.has_photo = tg_group.get("has_photo", False)
+            existing.unread_count = tg_group.get("unread_count", 0)
 
             # Reactivate if it was inactive
             if not existing.is_active:
@@ -131,8 +145,19 @@ async def sync_groups(
                 username=tg_group.get("username"),
                 is_admin=tg_group.get("is_admin", False),
                 slow_mode_delay=tg_group.get("slow_mode_delay", 0),
-                has_media_restriction=tg_group.get("has_media_restriction", False),
-                has_link_restriction=tg_group.get("has_link_restriction", False),
+                # Permission flags
+                can_send_messages=tg_group.get("can_send_messages", True),
+                can_send_media=tg_group.get("can_send_media", True),
+                can_embed_links=tg_group.get("can_embed_links", True),
+                can_send_polls=tg_group.get("can_send_polls", True),
+                can_send_stickers=tg_group.get("can_send_stickers", True),
+                # Security flags
+                is_scam=tg_group.get("is_scam", False),
+                is_fake=tg_group.get("is_fake", False),
+                # Group characteristics
+                is_megagroup=tg_group.get("is_megagroup", False),
+                has_photo=tg_group.get("has_photo", False),
+                unread_count=tg_group.get("unread_count", 0),
                 permission_type=PermissionType.ALL,
                 is_active=True
             )

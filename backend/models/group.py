@@ -30,8 +30,22 @@ class Group(Base):
     username = Column(String, nullable=True)
     is_admin = Column(Boolean, default=False)
     slow_mode_delay = Column(Integer, default=0)
-    has_media_restriction = Column(Boolean, default=False)
-    has_link_restriction = Column(Boolean, default=False)
+    
+    # Permission flags (inverted naming for clarity)
+    can_send_messages = Column(Boolean, default=True)
+    can_send_media = Column(Boolean, default=True)
+    can_embed_links = Column(Boolean, default=True)
+    can_send_polls = Column(Boolean, default=True)
+    can_send_stickers = Column(Boolean, default=True)
+    
+    # Security flags
+    is_scam = Column(Boolean, default=False)
+    is_fake = Column(Boolean, default=False)
+    
+    # Group characteristics
+    is_megagroup = Column(Boolean, default=False)
+    has_photo = Column(Boolean, default=False)
+    unread_count = Column(Integer, default=0)
     
     # Analytics fields
     messages_sent = Column(Integer, default=0)

@@ -116,7 +116,7 @@ class TelegramClientService:
                 if dialog.is_group:
                     entity = dialog.entity
                     
-                    # Extract logic
+                    # Extract basic metadata
                     member_count = getattr(entity, 'participants_count', 0) or 0
                     username = getattr(entity, 'username', None)
                     
@@ -126,15 +126,63 @@ class TelegramClientService:
                     # Slow mode
                     slow_mode_delay = getattr(entity, 'slowmode_seconds', 0) or 0
                     
-                    # Global restrictions (default_banned_rights)
-                    # If True, it means it is BANNED for everyone
-                    banned_rights = getattr(entity, 'default_banned_rights', None)
-                    has_media_restriction = False
-                    has_link_restriction = False
+                    # Security flags
+                    is_scam = getattr(entity, 'scam', False)
+                    is_fake = getattr(entity, 'fake', False)
                     
-                    if banned_rights:
-                        has_media_restriction = getattr(banned_rights, 'send_media', False)
-                        has_link_restriction = getattr(banned_rights, 'embed_links', False)
+                    # Group type
+                    is_megagroup = getattr(entity, 'megagroup', False)
+                    
+                    # Profile picture
+                    has_photo = getattr(entity, 'photo', None) is not None
+                    
+                    # Activity metrics
+                    unread_count = dialog.unread_count if hasattr(dialog, 'unread_count') else 0
+                    
+                    # Permission Detection - Check BOTH global AND user-specific restrictions
+                    # default_banned_rights = what's banned for everyone
+                    # participant rights = what's banned/allowed for YOU specifically
+                    
+                    # Permission Detection - ACCURATE (checks both layers)
+                    # Layer 1: default_banned_rights = what's banned for everyone
+                    # Layer 2: user permissions = what's banned/allowed for YOU specifically
+                    # This is slower but much more accurate!
+                    
+                    default_banned = getattr(entity, 'default_banned_rights', None)
+                    
+                    # Get YOUR specific permissions in this group
+                    try:
+                        participant = await self.client.get_permissions(entity)
+                    except Exception as e:
+                        # If we can't fetch permissions, fallback to group-wide only
+                        participant = None
+                    
+                    # Helper: Check if action is ALLOWED
+                    # Action is allowed ONLY if: NOT banned group-wide AND you have permission
+                    def can_do(action_name):
+                        # Check group-wide ban first
+                        globally_banned = getattr(default_banned, action_name, False) if default_banned else False
+                        
+                        # Check if YOU specifically have this permission
+                        if participant:
+                            # participant.send_media = True means YOU CAN
+                            # participant.send_media = False means YOU CANNOT
+                            user_can = getattr(participant, action_name, True)
+                        else:
+                            # Fallback: if we can't get your permissions, assume you follow group rules
+                            user_can = True
+                        
+                        # Final decision: Can do ONLY if NOT globally banned AND you have permission
+                        return (not globally_banned) and user_can
+                    
+                    # Check all permissions
+                    can_send_messages = can_do('send_messages')
+                    can_send_media = can_do('send_media')
+                    can_embed_links = can_do('embed_links')
+                    can_send_polls = can_do('send_polls')
+                    can_send_stickers = can_do('send_stickers')
+
+
 
                     groups.append({
                         "telegram_id": str(dialog.id),
@@ -143,8 +191,19 @@ class TelegramClientService:
                         "username": username,
                         "is_admin": is_admin,
                         "slow_mode_delay": slow_mode_delay,
-                        "has_media_restriction": has_media_restriction,
-                        "has_link_restriction": has_link_restriction
+                        # New permission flags (inverted logic for clarity)
+                        "can_send_messages": can_send_messages,
+                        "can_send_media": can_send_media,
+                        "can_embed_links": can_embed_links,
+                        "can_send_polls": can_send_polls,
+                        "can_send_stickers": can_send_stickers,
+                        # Security flags
+                        "is_scam": is_scam,
+                        "is_fake": is_fake,
+                        # Group characteristics
+                        "is_megagroup": is_megagroup,
+                        "has_photo": has_photo,
+                        "unread_count": unread_count
                     })
             
             return groups

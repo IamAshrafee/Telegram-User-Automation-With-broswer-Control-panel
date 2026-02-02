@@ -34,12 +34,14 @@
 /* --- Compact Group Card --- */
 .group-card {
   background: white;
-  border-radius: var(--radius-lg);
+  border-radius: 8px;
   border: 1px solid var(--slate-200);
-  padding: var(--space-4);
+  padding: 12px;
+  /* Reduced from 16px */
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 8px;
+  /* Reduced from 12px */
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -66,7 +68,8 @@
 
 .group-card.active {
   border-left: 3px solid var(--accent-500);
-  padding-left: calc(var(--space-4) - 3px);
+  padding-left: calc(12px - 3px);
+  /* Adjusted for compact */
 }
 
 /* Header */
@@ -74,12 +77,14 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: 8px;
+  /* Reduced from 10px */
 }
 
 .header-main {
   display: flex;
-  gap: var(--space-3);
+  gap: 10px;
+  /* Reduced from 12px */
   flex: 1;
   min-width: 0;
 }
@@ -87,6 +92,8 @@
 .title-section {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  /* Reduced from 4px */
   min-width: 0;
   width: 100%;
 }
@@ -94,12 +101,14 @@
 .title-row {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
+  /* Reduced from 8px */
   width: 100%;
 }
 
 .group-card h3 {
-  font-size: 1rem;
+  font-size: 0.95rem;
+  /* Reduced from 1rem */
   font-weight: 600;
   color: var(--text-main);
   margin: 0;
@@ -110,21 +119,25 @@
 }
 
 .member-badge {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
+  /* Reduced from 0.75rem */
   font-weight: 600;
   color: var(--color-text-secondary);
   background: var(--slate-100);
-  padding: 2px 6px;
+  padding: 2px 5px;
+  /* Reduced from 2px 6px */
   border-radius: 4px;
   flex-shrink: 0;
 }
 
 .username-link {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  /* Reduced from 0.8rem */
   color: var(--primary-600);
   text-decoration: none;
   font-family: monospace;
-  margin-top: 2px;
+  margin-top: 0px;
+  /* Reduced from 2px */
 }
 
 .username-link:hover {
@@ -134,7 +147,8 @@
 /* Badges Row */
 .badges-row {
   display: flex;
-  gap: 6px;
+  gap: 4px;
+  /* Reduced from 6px */
   flex-wrap: wrap;
 }
 
@@ -166,24 +180,30 @@
 .group-stats-compact {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 6px;
+  /* Reduced from 8px */
   background: var(--slate-50);
-  padding: 8px;
-  border-radius: var(--radius-md);
+  padding: 6px;
+  /* Reduced from 8px */
+  border-radius: 6px;
+  /* Reduced from 8px */
 }
 
 .stat-pill {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.75rem;
+  gap: 3px;
+  /* Reduced from 4px */
+  font-size: 0.7rem;
+  /* Reduced from 0.75rem */
   font-weight: 600;
   color: var(--slate-700);
   white-space: nowrap;
 }
 
 .stat-pill .icon {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  /* Reduced from 0.9rem */
 }
 
 .stat-pill.text-danger {
@@ -197,27 +217,34 @@
 /* Actions */
 .group-actions-compact {
   display: flex;
-  gap: var(--space-2);
+  gap: 6px;
+  /* Reduced from 8px */
   align-items: center;
   margin-top: auto;
 }
 
 .form-control-xs {
-  height: 28px;
-  padding: 0 8px;
-  font-size: 0.8rem;
+  height: 26px;
+  /* Reduced from 28px */
+  padding: 0 6px;
+  /* Reduced from 8px */
+  font-size: 0.75rem;
+  /* Reduced from 0.8rem */
 }
 
 .btn-icon {
   background: transparent;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  /* Reduced from 28px */
+  height: 26px;
+  /* Reduced from 28px */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 0.9rem;
+  /* Reduced from 1rem */
   cursor: pointer;
   color: var(--slate-500);
 }
@@ -389,4 +416,141 @@
   font-weight: var(--font-medium);
   margin-bottom: var(--space-1);
   color: var(--color-text-main);
+}
+
+/* --- 🎨 ENHANCED UI COMPONENTS --- */
+
+/* 📸 Group Avatar - COMPACT */
+.group-avatar {
+  width: 32px;
+  /* Reduced from 40px */
+  height: 32px;
+  /* Reduced from 40px */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  /* Reduced from 1.2rem */
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25);
+  /* Reduced shadow */
+}
+
+.group-avatar.placeholder {
+  background: linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%);
+  font-size: 0.95rem;
+  /* Reduced from 1.1rem */
+}
+
+/* 🔐 Permission Grid - COMPACT */
+.permission-grid {
+  display: flex;
+  gap: 6px;
+  /* Reduced from 8px */
+  padding: 8px;
+  /* Reduced from 10px */
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 6px;
+  /* Reduced from 8px */
+  border: 1px solid #e2e8f0;
+  justify-content: space-between;
+}
+
+.permission-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  /* Reduced from 4px */
+  padding: 4px 6px;
+  /* Reduced from 6px 8px */
+  border-radius: 5px;
+  /* Reduced from 6px */
+  transition: all 0.2s ease;
+  flex: 1;
+  min-width: 0;
+}
+
+.permission-item.allowed {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.permission-item.restricted {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.permission-item:hover {
+  transform: translateY(-1px);
+  /* Reduced from -2px */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  /* Reduced shadow */
+}
+
+.perm-icon {
+  font-size: 0.95rem;
+  /* Reduced from 1.1rem */
+  display: block;
+}
+
+.perm-label {
+  font-size: 0.6rem;
+  /* Reduced from 0.65rem */
+  font-weight: 600;
+  color: var(--slate-700);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  /* Reduced from 0.03em */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* 👑 Enhanced Badge Variants */
+.badge-gold {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(245, 158, 11, 0.15);
+  /* Reduced shadow */
+}
+
+.badge-primary {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+/* ⚠️ Pulse Animation for Critical Badges */
+.badge-pulse {
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0);
+    /* Reduced from 4px */
+  }
+}
+
+/* Improved Badge Spacing - COMPACT */
+.badges-row .badge {
+  font-size: 0.65rem;
+  /* Reduced from 0.7rem */
+  padding: 3px 6px;
+  /* Reduced from 4px 8px */
+  font-weight: 600;
 }

@@ -15,8 +15,23 @@ class GroupBase(BaseModel):
     username: Optional[str] = None
     is_admin: bool = False
     slow_mode_delay: int = 0
-    has_media_restriction: bool = False
-    has_link_restriction: bool = False
+    
+    # Permission flags (inverted naming for clarity)
+    can_send_messages: bool = True
+    can_send_media: bool = True
+    can_embed_links: bool = True
+    can_send_polls: bool = True
+    can_send_stickers: bool = True
+    
+    # Security flags
+    is_scam: bool = False
+    is_fake: bool = False
+    
+    # Group characteristics
+    is_megagroup: bool = False
+    has_photo: bool = False
+    unread_count: int = 0
+
 
 
 class GroupCreate(GroupBase):
