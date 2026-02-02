@@ -1,937 +1,874 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Telegram Automation System</title>
-    <script>
-      // 🚨 Stealth Mode Diagnostic Guard
-      window.onerror = function(msg, url, lineNo, columnNo, error) {
-        console.error('CRITICAL ERROR:', msg, url, lineNo);
-        const errDiv = document.createElement('div');
-        errDiv.style = 'position:fixed;bottom:10px;right:10px;background:red;color:white;padding:10px;z-index:100000;font-size:12px;border-radius:5px;max-width:300px;';
-        errDiv.innerHTML = '<b>JS Error:</b> ' + msg + '<br><small>Line: ' + lineNo + '</small>';
-        document.body.appendChild(errDiv);
-        return false;
-      };
 
-      // Subpath Trailing Slash Failsafe
-      (function() {
-        const path = window.location.pathname;
-        if (path !== '/' && !path.endsWith('/') && !path.includes('.')) {
-          window.location.replace(path + '/');
-        }
-      })();
-    </script>
-    <style>
-      #bootStatus { position: fixed; top: 10px; right: 10px; background: rgba(0,51,102,0.8); color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; z-index: 99999; display: flex; align-items: center; gap: 8px; }
-      .spinner-small { width: 12px; height: 12px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
-      @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
-    <link rel="stylesheet" href="css/variables.css" />
-    <link rel="stylesheet" href="css/animations.css" />
-    <link rel="stylesheet" href="css/composer.css" />
-    <link rel="stylesheet" href="css/styles.css" />
-    <link rel="stylesheet" href="css/components.css" />
-    <link rel="stylesheet" href="css/dashboard.css" />
-    <link rel="stylesheet" href="css/forms.css" />
-    <link rel="stylesheet" href="css/cards.css" />
-    <link rel="stylesheet" href="css/settings.css" />
-    <link rel="stylesheet" href="css/media.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <!-- Boot Status Indicator -->
-    <div id="bootStatus">
-      <div class="spinner-small"></div>
-      <span>System Loading...</span>
-    </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Telegram Automation System</title>
+  <script>
+    // 🚨 Stealth Mode Diagnostic Guard
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+      console.error('CRITICAL ERROR:', msg, url, lineNo);
+      const errDiv = document.createElement('div');
+      errDiv.style = 'position:fixed;bottom:10px;right:10px;background:red;color:white;padding:10px;z-index:100000;font-size:12px;border-radius:5px;max-width:300px;';
+      errDiv.innerHTML = '<b>JS Error:</b> ' + msg + '<br><small>Line: ' + lineNo + '</small>';
+      document.body.appendChild(errDiv);
+      return false;
+    };
 
-    <!-- Authentication Modal -->
-    <div id="authModal" class="modal">
-      <div class="modal-content text-center">
-        <div class="mb-4">
-          <span style="font-size: 3rem">📱</span>
-        </div>
-        <h2 class="mb-2">Telegram Automation</h2>
-        <p class="text-secondary mb-4">
-          Sign in to manage your groups and messages
-        </p>
-        <div id="phoneStep" class="auth-step">
-          <p>Enter your phone number to receive an OTP code</p>
-          <input type="tel" id="phoneInput" placeholder="+1234567890" />
-          <button id="sendCodeBtn" class="btn btn-primary">Send Code</button>
-        </div>
-        <div id="otpStep" class="auth-step hidden">
-          <p>Enter the OTP code sent to your Telegram</p>
-          <input type="text" id="otpInput" placeholder="12345" />
-          <button id="verifyCodeBtn" class="btn btn-primary">
-            Verify Code
-          </button>
-        </div>
-        <div id="passwordStep" class="auth-step hidden">
-          <p>Enter your 2FA password</p>
-          <input
-            type="password"
-            id="passwordInput"
-            placeholder="Your 2FA password"
-          />
-          <button id="verifyPasswordBtn" class="btn btn-primary">
-            Verify Password
-          </button>
-        </div>
+    // Subpath Trailing Slash Failsafe
+    (function () {
+      const path = window.location.pathname;
+      if (path !== '/' && !path.endsWith('/') && !path.includes('.')) {
+        window.location.replace(path + '/');
+      }
+    })();
+  </script>
+  <style>
+    #bootStatus {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 51, 102, 0.8);
+      color: white;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 12px;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .spinner-small {
+      width: 12px;
+      height: 12px;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/composer.css" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <link rel="stylesheet" href="css/forms.css" />
+  <link rel="stylesheet" href="css/cards.css" />
+  <link rel="stylesheet" href="css/settings.css" />
+  <link rel="stylesheet" href="css/media.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+
+<body>
+  <!-- Boot Status Indicator -->
+  <div id="bootStatus">
+    <div class="spinner-small"></div>
+    <span>System Loading...</span>
+  </div>
+
+  <!-- Authentication Modal -->
+  <div id="authModal" class="modal">
+    <div class="modal-content text-center">
+      <div class="mb-4">
+        <span style="font-size: 3rem">📱</span>
+      </div>
+      <h2 class="mb-2">Telegram Automation</h2>
+      <p class="text-secondary mb-4">
+        Sign in to manage your groups and messages
+      </p>
+      <div id="phoneStep" class="auth-step">
+        <p>Enter your phone number to receive an OTP code</p>
+        <input type="tel" id="phoneInput" placeholder="+1234567890" />
+        <button id="sendCodeBtn" class="btn btn-primary">Send Code</button>
+      </div>
+      <div id="otpStep" class="auth-step hidden">
+        <p>Enter the OTP code sent to your Telegram</p>
+        <input type="text" id="otpInput" placeholder="12345" />
+        <button id="verifyCodeBtn" class="btn btn-primary">
+          Verify Code
+        </button>
+      </div>
+      <div id="passwordStep" class="auth-step hidden">
+        <p>Enter your 2FA password</p>
+        <input type="password" id="passwordInput" placeholder="Your 2FA password" />
+        <button id="verifyPasswordBtn" class="btn btn-primary">
+          Verify Password
+        </button>
       </div>
     </div>
+  </div>
 
-    <!-- Main Container -->
-    <div id="app" class="hidden">
-      <!-- Sidebar Navigation -->
-      <aside class="sidebar">
-        <div class="logo">
-          <h1>📱 Telegram Auto</h1>
+  <!-- Main Container -->
+  <div id="app" class="hidden">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="logo">
+        <h1>📱 Telegram Auto</h1>
+      </div>
+      <nav class="nav">
+        <a href="#" class="nav-item active" data-section="dashboard">
+          <span class="icon">📊</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-section="groups">
+          <span class="icon">👥</span>
+          <span>Groups</span>
+        </a>
+        <a href="#" class="nav-item" data-section="media">
+          <span class="icon">🖼️</span>
+          <span>Media Library</span>
+        </a>
+        <a href="#" class="nav-item" data-section="messages">
+          <span class="icon">✉️</span>
+          <span>Send Message</span>
+        </a>
+
+        <a href="#" class="nav-item" data-section="settings">
+          <span class="icon">⚙️</span>
+          <span>Settings</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <span id="userPhone">Not connected</span>
         </div>
-        <nav class="nav">
-          <a href="#" class="nav-item active" data-section="dashboard">
-            <span class="icon">📊</span>
-            <span>Dashboard</span>
-          </a>
-          <a href="#" class="nav-item" data-section="groups">
-            <span class="icon">👥</span>
-            <span>Groups</span>
-          </a>
-          <a href="#" class="nav-item" data-section="media">
-            <span class="icon">🖼️</span>
-            <span>Media Library</span>
-          </a>
-          <a href="#" class="nav-item" data-section="messages">
-            <span class="icon">✉️</span>
-            <span>Send Message</span>
-          </a>
+        <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+      </div>
+    </aside>
 
-          <a href="#" class="nav-item" data-section="settings">
-            <span class="icon">⚙️</span>
-            <span>Settings</span>
-          </a>
-        </nav>
-        <div class="sidebar-footer">
-          <div class="user-info">
-            <span id="userPhone">Not connected</span>
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Dashboard Section -->
+      <section id="dashboard" class="content-section active">
+        <h2>Dashboard</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+              <h3 id="totalGroups">0</h3>
+              <p>Total Groups</p>
+            </div>
           </div>
-          <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+          <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-info">
+              <h3 id="activeGroups">0</h3>
+              <p>Active Groups</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🖼️</div>
+            <div class="stat-info">
+              <h3 id="totalMedia">0</h3>
+              <p>Media Files</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⏰</div>
+            <div class="stat-info">
+              <h3 id="scheduledMessages">0</h3>
+              <p>Scheduled</p>
+            </div>
+          </div>
         </div>
-      </aside>
 
-      <!-- Main Content -->
-      <main class="main-content">
-        <!-- Dashboard Section -->
-        <section id="dashboard" class="content-section active">
-          <h2>Dashboard</h2>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-icon">👥</div>
-              <div class="stat-info">
-                <h3 id="totalGroups">0</h3>
-                <p>Total Groups</p>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon">✅</div>
-              <div class="stat-info">
-                <h3 id="activeGroups">0</h3>
-                <p>Active Groups</p>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon">🖼️</div>
-              <div class="stat-info">
-                <h3 id="totalMedia">0</h3>
-                <p>Media Files</p>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon">⏰</div>
-              <div class="stat-info">
-                <h3 id="scheduledMessages">0</h3>
-                <p>Scheduled</p>
-              </div>
+        <!-- Rate Limit Widget -->
+        <div id="rateLimitWidget" class="dashboard-widget">
+          <p class="text-muted">Loading rate limit status...</p>
+        </div>
+      </section>
+
+      <!-- Groups Section -->
+      <section id="groups" class="content-section">
+        <div class="section-header">
+          <h2>Groups Management</h2>
+          <button id="syncGroupsBtn" class="btn btn-primary">
+            🔄 Sync from Telegram
+          </button>
+        </div>
+
+        <!-- Groups Toolbar -->
+        <div class="groups-toolbar">
+          <!-- Search & Sort -->
+          <div class="toolbar-group">
+            <input type="text" id="groupSearch" placeholder="🔍 Search groups..." class="search-input" />
+            <select id="sortBy" class="sort-select">
+              <option value="title-asc">Name (A-Z)</option>
+              <option value="title-desc">Name (Z-A)</option>
+              <option value="created_at-desc">Newest First</option>
+              <option value="created_at-asc">Oldest First</option>
+            </select>
+          </div>
+
+          <!-- Filters -->
+          <div class="toolbar-group">
+            <select id="permissionFilter">
+              <option value="">All Permissions</option>
+              <option value="all">All Content</option>
+              <option value="text_only">Text Only</option>
+              <option value="text_link">Text + Link</option>
+              <option value="text_image">Text + Image</option>
+              <option value="text_link_image">Text + Link + Image</option>
+            </select>
+            <div class="toggle-filter">
+              <input type="checkbox" id="activeOnlyFilter" checked />
+              <label for="activeOnlyFilter">Active Only</label>
             </div>
           </div>
 
-          <!-- Rate Limit Widget -->
-          <div id="rateLimitWidget" class="dashboard-widget">
-            <p class="text-muted">Loading rate limit status...</p>
-          </div>
-        </section>
-
-        <!-- Groups Section -->
-        <section id="groups" class="content-section">
-          <div class="section-header">
-            <h2>Groups Management</h2>
-            <button id="syncGroupsBtn" class="btn btn-primary">
-              🔄 Sync from Telegram
-            </button>
-          </div>
-
-          <!-- Groups Toolbar -->
-          <div class="groups-toolbar">
-            <!-- Search & Sort -->
-            <div class="toolbar-group">
-              <input
-                type="text"
-                id="groupSearch"
-                placeholder="🔍 Search groups..."
-                class="search-input"
-              />
-              <select id="sortBy" class="sort-select">
-                <option value="title-asc">Name (A-Z)</option>
-                <option value="title-desc">Name (Z-A)</option>
-                <option value="created_at-desc">Newest First</option>
-                <option value="created_at-asc">Oldest First</option>
-              </select>
+          <!-- Bulk Actions Integration -->
+          <div class="toolbar-group bulk-group">
+            <div class="select-all-wrapper">
+              <input type="checkbox" id="selectAllGroups" />
+              <label for="selectAllGroups">Select All
+                <span id="selectedCount" class="badge">0</span></label>
             </div>
 
-            <!-- Filters -->
-            <div class="toolbar-group">
-              <select id="permissionFilter">
-                <option value="">All Permissions</option>
+            <div id="bulkActionsDropdown" class="bulk-actions" style="display: none">
+              <select id="bulkPermission" class="bulk-select">
+                <option value="">Set Permission...</option>
                 <option value="all">All Content</option>
                 <option value="text_only">Text Only</option>
                 <option value="text_link">Text + Link</option>
                 <option value="text_image">Text + Image</option>
                 <option value="text_link_image">Text + Link + Image</option>
               </select>
-              <div class="toggle-filter">
-                <input type="checkbox" id="activeOnlyFilter" checked />
-                <label for="activeOnlyFilter">Active Only</label>
-              </div>
-            </div>
-
-            <!-- Bulk Actions Integration -->
-            <div class="toolbar-group bulk-group">
-              <div class="select-all-wrapper">
-                <input type="checkbox" id="selectAllGroups" />
-                <label for="selectAllGroups"
-                  >Select All
-                  <span id="selectedCount" class="badge">0</span></label
-                >
-              </div>
-
-              <div
-                id="bulkActionsDropdown"
-                class="bulk-actions"
-                style="display: none"
-              >
-                <select id="bulkPermission" class="bulk-select">
-                  <option value="">Set Permission...</option>
-                  <option value="all">All Content</option>
-                  <option value="text_only">Text Only</option>
-                  <option value="text_link">Text + Link</option>
-                  <option value="text_image">Text + Image</option>
-                  <option value="text_link_image">Text + Link + Image</option>
-                </select>
-                <div class="bulk-buttons">
-                  <button
-                    id="bulkActivateBtn"
-                    class="btn btn-outline-success btn-sm"
-                    title="Activate Selected"
-                  >
-                    ✅
-                  </button>
-                  <button
-                    id="bulkDeactivateBtn"
-                    class="btn btn-outline-danger btn-sm"
-                    title="Deactivate Selected"
-                  >
-                    ❌
-                  </button>
-                </div>
+              <div class="bulk-buttons">
+                <button id="bulkActivateBtn" class="btn btn-outline-success btn-sm" title="Activate Selected">
+                  ✅
+                </button>
+                <button id="bulkDeactivateBtn" class="btn btn-outline-danger btn-sm" title="Deactivate Selected">
+                  ❌
+                </button>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Toggle Analytics Button -->
-          <div class="mb-4">
-            <button id="toggleAnalyticsBtn" class="btn btn-primary">
-              📊 Show Analytics
+        <!-- Toggle Analytics Button -->
+        <div class="mb-4">
+          <button id="toggleAnalyticsBtn" class="btn btn-primary">
+            📊 Show Analytics
+          </button>
+        </div>
+
+        <!-- Analytics Section -->
+        <div class="analytics-section" id="groupAnalytics" style="display: none">
+          <div class="analytics-header">
+            <h3>📊 Group Performance Analytics</h3>
+            <button id="refreshAnalyticsBtn" class="btn btn-secondary btn-sm">
+              🔄 Refresh
             </button>
           </div>
 
-          <!-- Analytics Section -->
-          <div
-            class="analytics-section"
-            id="groupAnalytics"
-            style="display: none"
-          >
-            <div class="analytics-header">
-              <h3>📊 Group Performance Analytics</h3>
-              <button id="refreshAnalyticsBtn" class="btn btn-secondary btn-sm">
-                🔄 Refresh
-              </button>
+          <div class="analytics-overview">
+            <div class="stat-card">
+              <div class="stat-value" id="analyticsTotalMessages">0</div>
+              <div class="stat-label">Total Messages</div>
             </div>
-
-            <div class="analytics-overview">
-              <div class="stat-card">
-                <div class="stat-value" id="analyticsTotalMessages">0</div>
-                <div class="stat-label">Total Messages</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-value" id="analyticsSuccessRate">0%</div>
-                <div class="stat-label">Success Rate</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-value" id="analyticsFailed">0</div>
-                <div class="stat-label">Failed Messages</div>
-              </div>
+            <div class="stat-card">
+              <div class="stat-value" id="analyticsSuccessRate">0%</div>
+              <div class="stat-label">Success Rate</div>
             </div>
-
-            <div class="analytics-content">
-              <div class="analytics-card">
-                <h4>🏆 Top Performing Groups</h4>
-                <div id="topGroupsList"></div>
-              </div>
-
-              <div class="analytics-card">
-                <h4>⚠️ Groups Needing Attention</h4>
-                <div id="problemGroupsList"></div>
-              </div>
-
-              <div class="analytics-card">
-                <h4>💤 Inactive Groups (30+ days)</h4>
-                <div id="inactiveGroupsList"></div>
-              </div>
+            <div class="stat-card">
+              <div class="stat-value" id="analyticsFailed">0</div>
+              <div class="stat-label">Failed Messages</div>
             </div>
           </div>
 
-          <div id="groupsList" class="groups-list"></div>
-        </section>
+          <div class="analytics-content">
+            <div class="analytics-card">
+              <h4>🏆 Top Performing Groups</h4>
+              <div id="topGroupsList"></div>
+            </div>
 
-        <!-- Media Library Section moved below -->
+            <div class="analytics-card">
+              <h4>⚠️ Groups Needing Attention</h4>
+              <div id="problemGroupsList"></div>
+            </div>
 
-        <!-- Send Message Section -->
-        <section id="messages" class="content-section">
-          <div class="section-header">
-            <h2>Send Message</h2>
+            <div class="analytics-card">
+              <h4>💤 Inactive Groups (30+ days)</h4>
+              <div id="inactiveGroupsList"></div>
+            </div>
           </div>
+        </div>
 
-          <!-- Tabs -->
-          <div class="tabs">
-            <button class="tab-btn active" data-tab="compose">
-              📝 Compose
-            </button>
-            <button class="tab-btn" data-tab="scheduled">📅 Scheduled</button>
-            <button class="tab-btn" data-tab="history">📜 History</button>
-          </div>
+        <div id="groupsList" class="groups-list"></div>
+      </section>
 
-          <!-- Compose Tab -->
-          <div id="composeTab" class="tab-content active">
-            
-            <!-- Master Composer Card -->
-            <div class="composer-card">
-              
-              <!-- Header -->
-              <div class="composer-header">
-                <h3 class="composer-title">
-                  📝 New Message
-                </h3>
-                <div class="composer-actions">
-                  <span
-                    id="draftIndicator"
-                    class="badge"
-                    style="
+      <!-- Media Library Section moved below -->
+
+      <!-- Send Message Section -->
+      <section id="messages" class="content-section">
+        <div class="section-header">
+          <h2>Send Message</h2>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="compose">
+            📝 Compose
+          </button>
+          <button class="tab-btn" data-tab="scheduled">📅 Scheduled</button>
+          <button class="tab-btn" data-tab="history">📜 History</button>
+        </div>
+
+        <!-- Compose Tab -->
+        <div id="composeTab" class="tab-content active">
+
+          <!-- Master Composer Card -->
+          <div class="composer-card">
+
+            <!-- Header -->
+            <div class="composer-header">
+              <h3 class="composer-title">
+                📝 New Message
+              </h3>
+              <div class="composer-actions">
+                <span id="draftIndicator" class="badge" style="
                       background: var(--success-100);
                       color: var(--success-700);
                       display: none;
                       font-size: 0.8rem;
-                    "
-                  >
-                    Draft Saved
-                  </span>
-                  
-                  <div class="template-selector">
-                      <select
-                        id="loadTemplateSelect"
-                        class="template-select"
-                        style="min-width: 180px; font-size: 0.9rem; padding: 6px 12px;"
-                      >
-                        <option value="">📋 Load Template...</option>
-                      </select>
-                  </div>
+                    ">
+                  Draft Saved
+                </span>
 
-                  <button 
-                    id="discardDraftBtn" 
-                    class="btn btn-outline-danger btn-sm" 
-                    style="display: none;"
-                    title="Clear current draft"
-                  >
-                    ✕
-                  </button>
-                  <button id="saveDraftBtn" class="btn btn-secondary btn-sm" title="Save Draft">
-                    💾
-                  </button>
-                  <button id="saveTemplateBtn" class="btn btn-secondary btn-sm" title="Save as Template">
-                    📑
+                <div class="template-selector">
+                  <select id="loadTemplateSelect" class="template-select"
+                    style="min-width: 180px; font-size: 0.9rem; padding: 6px 12px;">
+                    <option value="">📋 Load Template...</option>
+                  </select>
+                </div>
+
+                <button id="discardDraftBtn" class="btn btn-outline-danger btn-sm" style="display: none;"
+                  title="Clear current draft">
+                  ✕
+                </button>
+                <button id="saveDraftBtn" class="btn btn-secondary btn-sm" title="Save Draft">
+                  💾
+                </button>
+                <button id="saveTemplateBtn" class="btn btn-secondary btn-sm" title="Save as Template">
+                  📑
+                </button>
+              </div>
+            </div>
+
+            <!-- Body -->
+            <div class="composer-body">
+
+              <!-- Content Area -->
+              <div class="form-group mb-0">
+                <label for="messageText" style="display:none">Message Content</label>
+                <div class="composer-textarea-wrapper">
+                  <textarea id="messageText" rows="8"
+                    placeholder="What would you like to say? Type your message here..."></textarea>
+
+                  <div class="smart-vars">
+                    <span class="badge badge-variable" title="Current Group Name">{group_name}</span>
+                    <span class="badge badge-variable" title="Current Date">{date}</span>
+                    <span class="badge badge-variable" title="Current Time">{time}</span>
+                    <span class="char-count" style="margin-left: auto; font-size: 0.8rem; color: var(--slate-400);">
+                      <span id="charCount">0</span> chars
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Content Rotation Section -->
+              <div class="form-group mb-3 mt-2">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="enableRotationCheck">
+                  <label class="form-check-label" for="enableRotationCheck" style="font-size: 0.9rem; cursor: pointer;">
+                    🔄 Enable Content Rotation (A/B Testing)
+                  </label>
+                </div>
+
+                <div id="rotationContainer"
+                  style="display: none; margin-top: 10px; padding-left: 20px; border-left: 2px solid var(--primary-100);">
+                  <p style="font-size: 0.85rem; color: var(--slate-500); margin-bottom: 8px;">
+                    Add variations. System will randomly pick one for each message sent.
+                  </p>
+                  <div id="variationsList">
+                    <!-- Helper template for variations -->
+                  </div>
+                  <button type="button" id="addVariationBtn" class="btn btn-outline-primary btn-sm mt-2">
+                    + Add Text Variation
                   </button>
                 </div>
               </div>
 
-              <!-- Body -->
-              <div class="composer-body">
-                
-                <!-- Content Area -->
-                <div class="form-group mb-0">
-                  <label for="messageText" style="display:none">Message Content</label>
-                  <div class="composer-textarea-wrapper">
-                    <textarea
-                      id="messageText"
-                      rows="8"
-                      placeholder="What would you like to say? Type your message here..."
-                    ></textarea>
-                    
-                    <div class="smart-vars">
-                        <span class="badge badge-variable" title="Current Group Name">{group_name}</span>
-                        <span class="badge badge-variable" title="Current Date">{date}</span>
-                        <span class="badge badge-variable" title="Current Time">{time}</span>
-                        <span class="char-count" style="margin-left: auto; font-size: 0.8rem; color: var(--slate-400);">
-                             <span id="charCount">0</span> chars
-                        </span>
+              <!-- Attachments Grid -->
+              <div class="composer-attachments">
+                <!-- Link Input -->
+                <div class="attachment-box">
+                  <span class="attachment-icon">🔗</span>
+                  <input type="url" id="messageLink" class="minimal-input" placeholder="Add a link (https://...)" />
+                </div>
+
+                <!-- Media Input -->
+                <div class="attachment-box" style="position: relative;">
+                  <span class="attachment-icon">🖼️</span>
+                  <input type="hidden" id="messageMedia" />
+                  <button type="button" id="selectMessageMedia" class="minimal-input"
+                    style="text-align: left; cursor: pointer; color: var(--slate-600);">
+                    Select Image/Media
+                  </button>
+
+                  <!-- Mini Preview -->
+                  <div id="messageMediaPreview" class="media-preview-mini">
+                    <img src="" alt="Preview" class="preview-img-card" />
+                  </div>
+
+                  <button type="button" id="clearMessageMedia"
+                    style="display: none; position: absolute; right: -10px; top: -10px; background: white; border: 1px solid #eee; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; color: red;">
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <div class="text-right mt-2">
+                <button type="button" id="previewMessageBtn" class="btn btn-ghost btn-sm"
+                  style="color: var(--primary-600);">
+                  👁️ Preview Appearance
+                </button>
+              </div>
+
+              <!-- Targeting & Schedule (Unified) -->
+              <div class="composer-targeting">
+
+                <div class="targeting-header">
+                  <span class="targeting-title">🎯 Targeting & Delivery</span>
+
+                  <div class="targeting-toggle">
+                    <div class="form-check form-switch"
+                      style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                      <input class="form-check-input" type="checkbox" id="bulkSendCheck" style="cursor: pointer;">
+                      <label class="form-check-label" for="bulkSendCheck" style="cursor: pointer; font-size: 0.9rem;">
+                        Bulk Send Mode
+                      </label>
                     </div>
                   </div>
                 </div>
 
-                <!-- Content Rotation Section -->
-                <div class="form-group mb-3 mt-2">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="enableRotationCheck">
-                        <label class="form-check-label" for="enableRotationCheck" style="font-size: 0.9rem; cursor: pointer;">
-                           🔄 Enable Content Rotation (A/B Testing)
-                        </label>
-                    </div>
-                    
-                    <div id="rotationContainer" style="display: none; margin-top: 10px; padding-left: 20px; border-left: 2px solid var(--primary-100);">
-                        <p style="font-size: 0.85rem; color: var(--slate-500); margin-bottom: 8px;">
-                            Add variations. System will randomly pick one for each message sent.
-                        </p>
-                        <div id="variationsList">
-                            <!-- Helper template for variations -->
-                        </div>
-                        <button type="button" id="addVariationBtn" class="btn btn-outline-primary btn-sm mt-2">
-                             + Add Text Variation
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Attachments Grid -->
-                <div class="composer-attachments">
-                  <!-- Link Input -->
-                  <div class="attachment-box">
-                    <span class="attachment-icon">🔗</span>
-                    <input
-                        type="url"
-                        id="messageLink"
-                        class="minimal-input"
-                        placeholder="Add a link (https://...)"
-                      />
-                  </div>
-                  
-                  <!-- Media Input -->
-                  <div class="attachment-box" style="position: relative;">
-                     <span class="attachment-icon">🖼️</span>
-                     <input type="hidden" id="messageMedia" />
-                     <button
-                        type="button"
-                        id="selectMessageMedia"
-                        class="minimal-input"
-                        style="text-align: left; cursor: pointer; color: var(--slate-600);"
-                      >
-                        Select Image/Media
-                      </button>
-                      
-                      <!-- Mini Preview -->
-                      <div id="messageMediaPreview" class="media-preview-mini">
-                          <img src="" alt="Preview" class="preview-img-card" />
-                      </div>
-                      
-                      <button
-                        type="button"
-                        id="clearMessageMedia"
-                        style="display: none; position: absolute; right: -10px; top: -10px; background: white; border: 1px solid #eee; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; color: red;"
-                      >
-                        ✕
-                      </button>
-                  </div>
-                </div>
-
-                <div class="text-right mt-2">
-                     <button
-                        type="button"
-                        id="previewMessageBtn"
-                        class="btn btn-ghost btn-sm"
-                        style="color: var(--primary-600);"
-                      >
-                        👁️ Preview Appearance
-                      </button>
-                </div>
-
-                <!-- Targeting & Schedule (Unified) -->
-                <div class="composer-targeting">
-                  
-                  <div class="targeting-header">
-                      <span class="targeting-title">🎯 Targeting & Delivery</span>
-                      
-                      <div class="targeting-toggle">
-                         <div class="form-check form-switch" style="margin: 0; display: flex; align-items: center; gap: 8px;">
-                            <input class="form-check-input" type="checkbox" id="bulkSendCheck" style="cursor: pointer;">
-                            <label class="form-check-label" for="bulkSendCheck" style="cursor: pointer; font-size: 0.9rem;">
-                               Bulk Send Mode
-                            </label>
-                         </div>
-                      </div>
-                  </div>
-
-                  <!-- Individual Groups (Default) -->
-                  <div id="individualGroupsGroup" class="form-group mb-3">
-                      <label style="font-size: 0.9rem; color: var(--slate-600); margin-bottom: 8px; display: block;">Select Target Groups</label>
-                      <div
-                        id="groupSelector"
-                        class="group-selector"
-                        style="
+                <!-- Individual Groups (Default) -->
+                <div id="individualGroupsGroup" class="form-group mb-3">
+                  <label style="font-size: 0.9rem; color: var(--slate-600); margin-bottom: 8px; display: block;">Select
+                    Target Groups</label>
+                  <div id="groupSelector" class="group-selector" style="
                           max-height: 180px;
                           overflow-y: auto;
                           background: #ffffff;
                           padding: 12px;
                           border: 1px solid var(--slate-200);
                           border-radius: 12px;
-                        "
-                      >
-                        <!-- Populated by JS -->
-                      </div>
+                        ">
+                    <!-- Populated by JS -->
                   </div>
-
-                  <!-- Bulk Options (Hidden by default) -->
-                  <div id="bulkPermissionGroup" class="form-group mb-3" style="display: none">
-                      <label>Select Groups by Permission</label>
-                      <select id="messageBulkPermission" class="form-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--slate-300);">
-                        <option value="">Choose permission type...</option>
-                        <option value="all">All Content</option>
-                        <option value="text_only">Text Only</option>
-                        <option value="text_link">Text + Link</option>
-                        <option value="text_image">Text + Image</option>
-                        <option value="text_link_image">Text + Link + Image</option>
-                      </select>
-                  </div>
-
-                  <!-- Schedule Options -->
-                  <div class="schedule-section mt-4 pt-4 border-top">
-                      <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" id="scheduleCheck">
-                        <label class="form-check-label" for="scheduleCheck">📅 Schedule for Later</label>
-                      </div>
-
-                      <div id="scheduleTimeGroup" class="expandable-section" style="display: none;">
-                          <div class="row" style="display: flex; gap: 20px;">
-                              <div style="flex: 1;">
-                                  <label style="font-size: 0.85rem;">Date & Time</label>
-                                  <input type="datetime-local" id="scheduleDateTime" class="form-control" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--slate-300);">
-                              </div>
-                              <div style="flex: 1;">
-                                  <label style="font-size: 0.85rem;">Recurrence</label>
-                                  <select id="recurrenceType" class="form-select" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--slate-300);">
-                                      <option value="once">No Repeat (Once)</option>
-                                      <option value="daily">Daily</option>
-                                      <option value="weekly">Weekly</option>
-                                      <option value="custom">Custom Interval</option>
-                                  </select>
-                              </div>
-                          </div>
-                          
-                          <!-- Custom Recurrence Details -->
-                          <div id="recurrenceCustomGroup" class="mt-3" style="display: none;">
-                               <div style="display: flex; gap: 10px; align-items: center;">
-                                   <span style="font-size: 0.9rem;">Every</span>
-                                   <input type="number" id="recurrenceInterval" min="1" placeholder="30" style="width: 80px; padding: 6px; border-radius: 6px; border: 1px solid var(--slate-300);">
-                                   <span style="font-size: 0.9rem;">minutes</span>
-                               </div>
-                          </div>
-                          <div id="recurrenceEndGroup" class="mt-3" style="display: none;">
-                               <label style="font-size: 0.85rem;">End Date (Optional)</label>
-                               <input type="datetime-local" id="recurrenceEndDate" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--slate-300);">
-                          </div>
-                          <div id="jitterGroup" class="mt-3" style="display: none;">
-                               <label style="font-size: 0.85rem;" title="Randomly adjust time by +/- X minutes">Variable Recurrence (Jitter) ±</label>
-                               <div style="display: flex; gap: 10px; align-items: center;">
-                                   <input type="number" id="jitterMinutes" min="0" max="120" placeholder="0" style="width: 80px; padding: 6px; border-radius: 6px; border: 1px solid var(--slate-300);">
-                                   <span style="font-size: 0.9rem;">minutes (random delay)</span>
-                               </div>
-                               <p style="font-size: 0.8rem; color: var(--slate-500); margin-top: 4px;">
-                                   Adds a random delay to make automation look more human.
-                               </p>
-                          </div>
-                      </div>
-                  </div>
-                
                 </div>
-              </div>
 
-              <!-- Footer -->
-              <div class="composer-footer">
-                 <div style="font-size: 0.9rem; color: var(--slate-500);">
-                     <!-- Place for status info -->
-                 </div>
-                 <button
-                    id="sendMessageBtn"
-                    class="btn btn-primary"
-                 >
-                    🚀 Send Message Now
-                 </button>
+                <!-- Bulk Options (Hidden by default) -->
+                <div id="bulkPermissionGroup" class="form-group mb-3" style="display: none">
+                  <label>Select Groups by Permission</label>
+                  <select id="messageBulkPermission" class="form-select"
+                    style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--slate-300);">
+                    <option value="">Choose permission type...</option>
+                    <option value="all">All Content</option>
+                    <option value="text_only">Text Only</option>
+                    <option value="text_link">Text + Link</option>
+                    <option value="text_image">Text + Image</option>
+                    <option value="text_link_image">Text + Link + Image</option>
+                  </select>
+                </div>
+
+                <!-- Schedule Options -->
+                <div class="schedule-section mt-4 pt-4 border-top">
+                  <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="scheduleCheck">
+                    <label class="form-check-label" for="scheduleCheck">📅 Schedule for Later</label>
+                  </div>
+
+                  <div id="scheduleTimeGroup" class="expandable-section" style="display: none;">
+                    <div class="row" style="display: flex; gap: 20px;">
+                      <div style="flex: 1;">
+                        <label style="font-size: 0.85rem;">Date & Time</label>
+                        <input type="datetime-local" id="scheduleDateTime" class="form-control"
+                          style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--slate-300);">
+                      </div>
+                      <div style="flex: 1;">
+                        <label style="font-size: 0.85rem;">Recurrence</label>
+                        <select id="recurrenceType" class="form-select"
+                          style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--slate-300);">
+                          <option value="once">No Repeat (Once)</option>
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="custom">Custom Interval</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Custom Recurrence Details -->
+                    <div id="recurrenceCustomGroup" class="mt-3" style="display: none;">
+                      <div style="display: flex; gap: 10px; align-items: center;">
+                        <span style="font-size: 0.9rem;">Every</span>
+                        <input type="number" id="recurrenceInterval" min="1" placeholder="30"
+                          style="width: 80px; padding: 6px; border-radius: 6px; border: 1px solid var(--slate-300);">
+                        <span style="font-size: 0.9rem;">minutes</span>
+                      </div>
+                    </div>
+                    <div id="recurrenceEndGroup" class="mt-3" style="display: none;">
+                      <label style="font-size: 0.85rem;">End Date (Optional)</label>
+                      <input type="datetime-local" id="recurrenceEndDate"
+                        style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--slate-300);">
+                    </div>
+                    <div id="jitterGroup" class="mt-3" style="display: none;">
+                      <label style="font-size: 0.85rem;" title="Randomly adjust time by +/- X minutes">Variable
+                        Recurrence (Jitter) ±</label>
+                      <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" id="jitterMinutes" min="0" max="120" placeholder="0"
+                          style="width: 80px; padding: 6px; border-radius: 6px; border: 1px solid var(--slate-300);">
+                        <span style="font-size: 0.9rem;">minutes (random delay)</span>
+                      </div>
+                      <p style="font-size: 0.8rem; color: var(--slate-500); margin-top: 4px;">
+                        Adds a random delay to make automation look more human.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
               </div>
-            
             </div>
-            
-            <!-- Hidden Progress Widget Container (Using global fixed widget instead usually, but keeping ID for safety) -->
-            <div id="embedded-progress-container" style="display: none;"></div>
-          </div>
 
-          <!-- History Tab -->
-          <div id="historyTab" class="tab-content" style="display: none">
-            <div class="groups-toolbar mb-4">
-              <div class="toolbar-group" style="flex: 2">
-                <input
-                  type="text"
-                  id="historySearch"
-                  placeholder="🔍 Search history..."
-                  class="search-input"
-                  style="width: 100%"
-                />
+            <!-- Footer -->
+            <div class="composer-footer">
+              <div style="font-size: 0.9rem; color: var(--slate-500);">
+                <!-- Place for status info -->
               </div>
-              <div class="toolbar-group">
-                <select id="historyFilter" style="min-width: 140px">
-                  <option value="all">All Status</option>
-                  <option value="sent">✅ Sent</option>
-                  <option value="failed">❌ Failed</option>
-                </select>
-                <button id="exportHistoryBtn" class="btn btn-secondary">
-                  📥 Export CSV
-                </button>
-              </div>
-            </div>
-
-            <div id="historyList" class="history-list">
-              <!-- Content populated by JS -->
-              <div class="empty-state">
-                <p class="text-secondary">Loading history...</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Scheduled Tab -->
-          <div id="scheduledTab" class="tab-content" style="display: none">
-            <div class="section-header">
-              <h3>Scheduled Messages</h3>
-              <button id="refreshScheduledBtn" class="btn btn-secondary btn-sm">
-                🔄 Refresh
+              <button id="sendMessageBtn" class="btn btn-primary">
+                🚀 Send Message Now
               </button>
             </div>
-            <div id="scheduledList" class="scheduled-list">
-              <!-- Content populated by JS -->
-              <div class="empty-state">
-                <p class="text-secondary">No scheduled messages</p>
-              </div>
+
+          </div>
+
+          <!-- Hidden Progress Widget Container (Using global fixed widget instead usually, but keeping ID for safety) -->
+          <div id="embedded-progress-container" style="display: none;"></div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="historyTab" class="tab-content" style="display: none">
+          <div class="groups-toolbar mb-4">
+            <div class="toolbar-group" style="flex: 2">
+              <input type="text" id="historySearch" placeholder="🔍 Search history..." class="search-input"
+                style="width: 100%" />
+            </div>
+            <div class="toolbar-group">
+              <select id="historyFilter" style="min-width: 140px">
+                <option value="all">All Status</option>
+                <option value="sent">✅ Sent</option>
+                <option value="failed">❌ Failed</option>
+              </select>
+              <button id="exportHistoryBtn" class="btn btn-secondary">
+                📥 Export CSV
+              </button>
             </div>
           </div>
-        </section>
 
-        <!-- Media Library Section -->
-        <section id="media" class="content-section">
-          <div class="section-header">
-            <h2>Media Library</h2>
-            <p class="section-description">
-              Upload and manage images for your messages
-            </p>
+          <div id="historyList" class="history-list">
+            <!-- Content populated by JS -->
+            <div class="empty-state">
+              <p class="text-secondary">Loading history...</p>
+            </div>
           </div>
+        </div>
 
-          <div
-            class="media-container"
-            style="
+        <!-- Scheduled Tab -->
+        <div id="scheduledTab" class="tab-content" style="display: none">
+          <div class="section-header">
+            <h3>Scheduled Messages</h3>
+            <button id="refreshScheduledBtn" class="btn btn-secondary btn-sm">
+              🔄 Refresh
+            </button>
+          </div>
+          <div id="scheduledList" class="scheduled-list">
+            <!-- Content populated by JS -->
+            <div class="empty-state">
+              <p class="text-secondary">No scheduled messages</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Media Library Section -->
+      <section id="media" class="content-section">
+        <div class="section-header">
+          <h2>Media Library</h2>
+          <p class="section-description">
+            Upload and manage images for your messages
+          </p>
+        </div>
+
+        <div class="media-container" style="
               background: white;
               border-radius: 12px;
               padding: 24px;
               box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            "
-          >
-            <!-- Upload Area -->
-            <div id="uploadArea" class="upload-area mb-6">
-              <div class="upload-content">
-                <div style="color: var(--color-primary); margin-bottom: 1rem">
-                  <svg
-                    width="64"
-                    height="64"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                  </svg>
-                </div>
-                <p
-                  style="
+            ">
+          <!-- Upload Area -->
+          <div id="uploadArea" class="upload-area mb-6">
+            <div class="upload-content">
+              <div style="color: var(--color-primary); margin-bottom: 1rem">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+              </div>
+              <p style="
                     font-size: 1.1rem;
                     font-weight: 500;
                     color: var(--text-main);
                     margin-bottom: 8px;
-                  "
-                >
-                  Drag & Drop images here
-                </p>
-                <p style="color: var(--text-secondary); margin-bottom: 24px">
-                  Supports JPG, PNG, GIF
-                </p>
-                <button id="selectFileBtn" class="btn btn-primary">
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    style="margin-right: 8px"
-                  >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                  </svg>
-                  Choose Files
-                </button>
-              </div>
-              <input
-                type="file"
-                id="fileInput"
-                multiple
-                accept="image/*"
-                hidden
-              />
+                  ">
+                Drag & Drop images here
+              </p>
+              <p style="color: var(--text-secondary); margin-bottom: 24px">
+                Supports JPG, PNG, GIF
+              </p>
+              <button id="selectFileBtn" class="btn btn-primary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Choose Files
+              </button>
             </div>
+            <input type="file" id="fileInput" multiple accept="image/*" hidden />
+          </div>
 
-            <!-- Stats & Filter Bar (Optional for future, simple header for now) -->
-            <div
-              class="media-toolbar mb-4"
-              style="
+          <!-- Stats & Filter Bar (Optional for future, simple header for now) -->
+          <div class="media-toolbar mb-4" style="
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-              "
-            >
-              <h3 style="font-size: 1.1rem; font-weight: 600">Gallery</h3>
-              <div style="color: var(--text-secondary); font-size: 0.9rem">
-                Total: <span id="totalMediaCount">0</span>
+              ">
+            <h3 style="font-size: 1.1rem; font-weight: 600">Gallery</h3>
+            <div style="color: var(--text-secondary); font-size: 0.9rem">
+              Total: <span id="totalMediaCount">0</span>
+            </div>
+          </div>
+
+          <!-- Gallery Grid -->
+          <div id="mediaGallery" class="media-gallery-grid">
+            <!-- JS renders items here -->
+          </div>
+
+          <!-- Load More -->
+          <div id="mediaLoadMore" class="load-more-container"></div>
+        </div>
+      </section>
+
+      <!-- Settings Section -->
+      <!-- Settings Section -->
+      <section id="settings" class="content-section">
+        <div class="section-header">
+          <h2>⚙️ Settings</h2>
+          <p class="text-secondary">Configure automation parameters and defaults</p>
+        </div>
+
+        <div class="settings-container">
+          <!-- Automation Delays -->
+          <div class="settings-card">
+            <h3><span class="icon">🕒</span> Message Delays</h3>
+            <p class="settings-description">
+              Configure random delays between messages to mimic human behavior and avoid spam detection.
+            </p>
+
+            <div class="settings-form-group">
+              <label for="minDelay">Minimum Delay (seconds)</label>
+              <div class="input-with-icon">
+                <span class="input-icon">⏱️</span>
+                <input type="number" id="minDelay" min="5" max="300" placeholder="e.g. 10">
+              </div>
+              <span class="help-text">Minimum: 5 seconds</span>
+            </div>
+
+            <div class="settings-form-group">
+              <label for="maxDelay">Maximum Delay (seconds)</label>
+              <div class="input-with-icon">
+                <span class="input-icon">⏳</span>
+                <input type="number" id="maxDelay" min="5" max="300" placeholder="e.g. 30">
+              </div>
+              <span class="help-text">Maximum: 300 seconds</span>
+            </div>
+          </div>
+
+          <!-- Limits & Localization -->
+          <div class="settings-card">
+            <h3><span class="icon">📊</span> Limits & Zone</h3>
+            <p class="settings-description">
+              Set daily safety limits and your local timezone for accurate scheduling.
+            </p>
+
+            <div class="settings-form-group">
+              <label for="dailyLimit">Daily Safety Limit</label>
+              <div class="input-with-icon">
+                <span class="input-icon">🛡️</span>
+                <input type="number" id="dailyLimit" min="1" max="1000" placeholder="e.g. 100">
+              </div>
+              <span class="help-text">Max messages/day before auto-stop</span>
+            </div>
+
+            <div class="settings-form-group">
+              <label for="timezoneSelect">Timezone</label>
+              <div class="input-with-icon">
+                <span class="input-icon">🌍</span>
+                <select id="timezoneSelect">
+                  <option value="UTC">UTC (Universal Time)</option>
+                  <option value="Asia/Dhaka">Asia/Dhaka (Bangladesh)</option>
+                  <option value="Asia/Kolkata">Asia/Kolkata (India)</option>
+                  <option value="Asia/Singapore">Asia/Singapore</option>
+                  <option value="Asia/Dubai">Asia/Dubai</option>
+                  <option value="Europe/London">Europe/London</option>
+                  <option value="Europe/Berlin">Europe/Berlin</option>
+                  <option value="America/New_York">America/New_York</option>
+                  <option value="America/Chicago">America/Chicago</option>
+                  <option value="America/Los_Angeles">America/Los_Angeles</option>
+                </select>
               </div>
             </div>
-
-            <!-- Gallery Grid -->
-            <div id="mediaGallery" class="media-gallery-grid">
-              <!-- JS renders items here -->
-            </div>
-
-            <!-- Load More -->
-            <div id="mediaLoadMore" class="load-more-container"></div>
           </div>
-        </section>
 
-        <!-- Settings Section -->
-        <!-- Settings Section -->
-        <section id="settings" class="content-section">
-          <div class="section-header">
-            <h2>⚙️ Settings</h2>
-            <p class="text-secondary">Configure automation parameters and defaults</p>
-          </div>
-          
-          <div class="settings-container">
-            <!-- Automation Delays -->
-            <div class="settings-card">
-              <h3><span class="icon">🕒</span> Message Delays</h3>
-              <p class="settings-description">
-                Configure random delays between messages to mimic human behavior and avoid spam detection.
+          <!-- Danger Zone -->
+          <div class="danger-zone-container">
+            <div class="settings-card danger-zone">
+              <h3><span class="icon">☢️</span> Danger Zone</h3>
+              <p class="settings-description" style="color: #b91c1c;">
+                Destructive actions. Deleted data cannot be recovered. Please be certain.
               </p>
-              
-              <div class="settings-form-group">
-                <label for="minDelay">Minimum Delay (seconds)</label>
-                <div class="input-with-icon">
-                    <span class="input-icon">⏱️</span>
-                    <input type="number" id="minDelay" min="5" max="300" placeholder="e.g. 10">
-                </div>
-                <span class="help-text">Minimum: 5 seconds</span>
-              </div>
-              
-              <div class="settings-form-group">
-                <label for="maxDelay">Maximum Delay (seconds)</label>
-                <div class="input-with-icon">
-                    <span class="input-icon">⏳</span>
-                    <input type="number" id="maxDelay" min="5" max="300" placeholder="e.g. 30">
-                </div>
-                <span class="help-text">Maximum: 300 seconds</span>
-              </div>
-            </div>
 
-            <!-- Limits & Localization -->
-            <div class="settings-card">
-              <h3><span class="icon">📊</span> Limits & Zone</h3>
-              <p class="settings-description">
-                Set daily safety limits and your local timezone for accurate scheduling.
-              </p>
-              
-              <div class="settings-form-group">
-                <label for="dailyLimit">Daily Safety Limit</label>
-                <div class="input-with-icon">
-                    <span class="input-icon">🛡️</span>
-                    <input type="number" id="dailyLimit" min="1" max="1000" placeholder="e.g. 100">
+              <div class="danger-grid">
+                <div class="danger-item">
+                  <h4>Clear Media Library</h4>
+                  <p>Delete all uploaded images.</p>
+                  <button data-clear="media" class="btn btn-outline-danger btn-sm">Delete Media</button>
                 </div>
-                <span class="help-text">Max messages/day before auto-stop</span>
-              </div>
-
-              <div class="settings-form-group">
-                <label for="timezoneSelect">Timezone</label>
-                <div class="input-with-icon">
-                    <span class="input-icon">🌍</span>
-                    <select id="timezoneSelect">
-                        <option value="UTC">UTC (Universal Time)</option>
-                        <option value="Asia/Dhaka">Asia/Dhaka (Bangladesh)</option>
-                        <option value="Asia/Kolkata">Asia/Kolkata (India)</option>
-                        <option value="Asia/Singapore">Asia/Singapore</option>
-                        <option value="Asia/Dubai">Asia/Dubai</option>
-                        <option value="Europe/London">Europe/London</option>
-                        <option value="Europe/Berlin">Europe/Berlin</option>
-                        <option value="America/New_York">America/New_York</option>
-                        <option value="America/Chicago">America/Chicago</option>
-                        <option value="America/Los_Angeles">America/Los_Angeles</option>
-                    </select>
+                <div class="danger-item">
+                  <h4>Clear Groups</h4>
+                  <p>Remove all synchronized groups.</p>
+                  <button data-clear="groups" class="btn btn-outline-danger btn-sm">Delete Groups</button>
+                </div>
+                <div class="danger-item">
+                  <h4>Clear History</h4>
+                  <p>Delete all sent message logs.</p>
+                  <button data-clear="messages" class="btn btn-outline-danger btn-sm">Delete History</button>
+                </div>
+                <div class="danger-item">
+                  <h4>Clear Scheduled</h4>
+                  <p>Cancel all pending messages.</p>
+                  <button data-clear="scheduled" class="btn btn-outline-danger btn-sm">Delete Scheduled</button>
+                </div>
+                <div class="danger-item" style="border-color: #f87171; background: #fff1f2;">
+                  <h4 style="color: #ef4444;">Reset Everything</h4>
+                  <p>Delete ALL data (keeps login).</p>
+                  <button data-clear="all" class="btn btn-danger-extreme btn-sm">Reset Data</button>
+                </div>
+                <div class="danger-item full-width" style="border-color: #f87171; background: #fff1f2;">
+                  <h4 style="color: #ef4444;">Logout & Clear</h4>
+                  <p>Delete all data AND logout.</p>
+                  <button data-clear="everything" class="btn btn-danger-extreme btn-sm">Clear Everyhing</button>
                 </div>
               </div>
-            </div>
-
-            <!-- Danger Zone -->
-            <div class="danger-zone-container">
-                <div class="settings-card danger-zone">
-                    <h3><span class="icon">☢️</span> Danger Zone</h3>
-                    <p class="settings-description" style="color: #b91c1c;">
-                        Destructive actions. Deleted data cannot be recovered. Please be certain.
-                    </p>
-                    
-                    <div class="danger-grid">
-                        <div class="danger-item">
-                            <h4>Clear Media Library</h4>
-                            <p>Delete all uploaded images.</p>
-                            <button data-clear="media" class="btn btn-outline-danger btn-sm">Delete Media</button>
-                        </div>
-                        <div class="danger-item">
-                            <h4>Clear Groups</h4>
-                            <p>Remove all synchronized groups.</p>
-                            <button data-clear="groups" class="btn btn-outline-danger btn-sm">Delete Groups</button>
-                        </div>
-                        <div class="danger-item">
-                            <h4>Clear History</h4>
-                            <p>Delete all sent message logs.</p>
-                            <button data-clear="messages" class="btn btn-outline-danger btn-sm">Delete History</button>
-                        </div>
-                        <div class="danger-item">
-                            <h4>Clear Scheduled</h4>
-                            <p>Cancel all pending messages.</p>
-                            <button data-clear="scheduled" class="btn btn-outline-danger btn-sm">Delete Scheduled</button>
-                        </div>
-                        <div class="danger-item" style="border-color: #f87171; background: #fff1f2;">
-                            <h4 style="color: #ef4444;">Reset Everything</h4>
-                            <p>Delete ALL data (keeps login).</p>
-                            <button data-clear="all" class="btn btn-danger-extreme btn-sm">Reset Data</button>
-                        </div>
-                        <div class="danger-item full-width" style="border-color: #f87171; background: #fff1f2;">
-                            <h4 style="color: #ef4444;">Logout & Clear</h4>
-                            <p>Delete all data AND logout.</p>
-                            <button data-clear="everything" class="btn btn-danger-extreme btn-sm">Clear Everyhing</button>
-                        </div>
-                    </div>
-                </div>
             </div>
           </div>
-          
-          <!-- Sticky Action Bar -->
-          <div class="settings-actions">
-            <div class="settings-info" style="margin-right: auto; font-size: 0.9rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 8px;">
-                <span>ℹ️ Changes take effect immediately</span>
-            </div>
-            <button id="settingsLogoutBtn" class="btn btn-secondary">🚪 Logout</button>
-            <button id="resetSettingsBtn" class="btn btn-secondary">🔄 Reset Defaults</button>
-            <button id="saveSettingsBtn" class="btn btn-primary btn-large">💾 Save Settings</button>
-          </div>
-        </section>
-      </main>
-    </div>
+        </div>
 
-    <!-- Duplicate Resolution Modal -->
-    <div id="duplicateModal" class="duplicate-modal-overlay">
-      <div class="duplicate-modal">
-        <div class="duplicate-modal-header">
-          <h3>Duplicate File Detected</h3>
-          <p id="duplicateFileName" class="text-muted"></p>
-        </div>
-        <div class="duplicate-modal-body">
-          <div class="duplicate-preview">
-            <img id="duplicatePreviewImg" src="" alt="Preview">
+        <!-- Sticky Action Bar -->
+        <div class="settings-actions">
+          <div class="settings-info"
+            style="margin-right: auto; font-size: 0.9rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 8px;">
+            <span>ℹ️ Changes take effect immediately</span>
           </div>
-          <p>What would you like to do with this file?</p>
+          <button id="settingsLogoutBtn" class="btn btn-secondary">🚪 Logout</button>
+          <button id="resetSettingsBtn" class="btn btn-secondary">🔄 Reset Defaults</button>
+          <button id="saveSettingsBtn" class="btn btn-primary btn-large">💾 Save Settings</button>
         </div>
-        <div class="duplicate-modal-actions">
-          <button id="replaceDuplicateBtn" class="btn btn-primary">🔄 Replace Existing</button>
-          <button id="keepBothBtn" class="btn btn-secondary">➕ Keep Both (Rename)</button>
-          <button id="cancelUploadBtn" class="btn btn-outline-danger">✕ Skip This File</button>
+      </section>
+    </main>
+  </div>
+
+  <!-- Duplicate Resolution Modal -->
+  <div id="duplicateModal" class="duplicate-modal-overlay">
+    <div class="duplicate-modal">
+      <div class="duplicate-modal-header">
+        <h3>Duplicate File Detected</h3>
+        <p id="duplicateFileName" class="text-muted"></p>
+      </div>
+      <div class="duplicate-modal-body">
+        <div class="duplicate-preview">
+          <img id="duplicatePreviewImg" src="" alt="Preview">
         </div>
+        <p>What would you like to do with this file?</p>
+      </div>
+      <div class="duplicate-modal-actions">
+        <button id="replaceDuplicateBtn" class="btn btn-primary">🔄 Replace Existing</button>
+        <button id="keepBothBtn" class="btn btn-secondary">➕ Keep Both (Rename)</button>
+        <button id="cancelUploadBtn" class="btn btn-outline-danger">✕ Skip This File</button>
       </div>
     </div>
+  </div>
 
-    <!-- Image Selector Modal -->
-    <div id="imageSelectorModal" class="modal hidden">
-      <div class="modal-content image-selector-modal">
-        <div class="modal-header">
-          <div class="d-flex align-items-center gap-4 flex-1">
-            <h2 class="mb-0">Select Image</h2>
-            <div class="search-wrapper selector-search">
-              <input type="text" id="selectorSearch" placeholder="Search items..." class="form-control" />
-            </div>
+  <!-- Image Selector Modal -->
+  <div id="imageSelectorModal" class="modal hidden">
+    <div class="modal-content image-selector-modal">
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-4 flex-1">
+          <h2 class="mb-0">Select Image</h2>
+          <div class="search-wrapper selector-search">
+            <input type="text" id="selectorSearch" placeholder="Search items..." class="form-control" />
           </div>
-          <button id="closeImageSelector" class="close-btn">✕</button>
         </div>
-        <div id="imageSelectorGallery" class="image-selector-gallery"></div>
+        <button id="closeImageSelector" class="close-btn">✕</button>
       </div>
+      <div id="imageSelectorGallery" class="image-selector-gallery"></div>
     </div>
+  </div>
 
-    <!-- Auth Check -->
-    <script src="js/web-auth.js"></script>
-    <script>
-      // Redirect to login if not authenticated
-      if (!isAuthenticated()) {
-        window.location.href = '/login.html';
-      }
-      
-      // Display user info
-      const user = getCurrentUser();
-      if (user) {
-        const userPhone = document.getElementById('userPhone');
-        if (userPhone) {
-          userPhone.textContent = user.name || user.email;
-        }
-      }
+  <!-- Auth Check -->
+  <script src="js/web-auth.js"></script>
+  <parameter name="script">
+    // Redirect to login if not authenticated
+    if (!isAuthenticated()) {
+    window.location.href = '/sys-admin-panel/login.html';
+    }
+
+    // Display user info
+    const user = getCurrentUser();
+    if (user) {
+    const userPhone = document.getElementById('userPhone');
+    if (userPhone) {
+    userPhone.textContent = user.name || user.email;
+    }
+    }
     </script>
 
     <!-- Scripts -->
     <script src="js/app.js" type="module"></script>
-  </body>
+</body>
+
 </html>

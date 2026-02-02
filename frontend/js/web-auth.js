@@ -2,7 +2,8 @@
  * Web authentication utilities for handling login, registration, and token management
  */
 
-const API_BASE_URL = window.location.origin;
+// API calls must go through /sys-admin-panel/ proxy
+const API_BASE_URL = window.location.origin + '/sys-admin-panel';
 
 /**
  * Register a new user

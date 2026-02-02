@@ -92,15 +92,17 @@ app.include_router(settings_router.router)
 app.include_router(admin.router)
 app.include_router(templates.router)
 
-# Serve frontend static files
-frontend_dir = Path(__file__).parent.parent / "frontend"
-app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
-
-
+# Health check endpoint - MUST be before static files mount!
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "service": "Telegram Automation System"}
+
+# Serve frontend static files - MUST be last!
+# Static file mount catches all remaining paths
+frontend_dir = Path(__file__).parent.parent / "frontend"
+app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
+
 
 
 if __name__ == "__main__":
