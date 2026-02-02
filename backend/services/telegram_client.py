@@ -165,12 +165,14 @@ class TelegramClientService:
                         
                         # Check if YOU specifically have this permission
                         if participant:
-                            # participant.send_media = True means YOU CAN
-                            # participant.send_media = False means YOU CANNOT
-                            user_can = getattr(participant, action_name, True)
+                            # IMPORTANT: In Telethon, participant permissions are INVERTED!
+                            # participant.send_media = True means "BANNED" (you CANNOT)
+                            # participant.send_media = False means "ALLOWED" (you CAN)
+                            user_banned = getattr(participant, action_name, False)
+                            user_can = not user_banned  # Invert it!
                         else:
                             # Fallback: if we can't get your permissions, assume you follow group rules
-                            user_can = True
+                            user_can = not globally_banned
                         
                         # Final decision: Can do ONLY if NOT globally banned AND you have permission
                         return (not globally_banned) and user_can
