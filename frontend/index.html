@@ -851,24 +851,24 @@
 
   <!-- Auth Check -->
   <script src="js/web-auth.js"></script>
-  <parameter name="script">
+  <script>
     // Redirect to login if not authenticated
     if (!isAuthenticated()) {
-    window.location.href = '/sys-admin-panel/login.html';
+      window.location.href = '/sys-admin-panel/login.html';
     }
 
     // Display user info
     const user = getCurrentUser();
     if (user) {
-    const userPhone = document.getElementById('userPhone');
-    if (userPhone) {
-    userPhone.textContent = user.name || user.email;
+      const userPhone = document.getElementById('userPhone');
+      if (userPhone) {
+        userPhone.textContent = user.name || user.email;
+      }
     }
-    }
-    </script>
+  </script>
 
-    <!-- Scripts -->
-    <script src="js/app.js" type="module"></script>
+  <!-- Scripts -->
+  <script src="js/app.js" type="module"></script>
 </body>
 
 </html>
