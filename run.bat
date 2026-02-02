@@ -20,6 +20,5 @@ echo Starting Backend Server...
 echo The application will be available at http://localhost:8000
 echo.
 
-cd backend
-python main.py
+python backend\main.py
 pause

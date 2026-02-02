@@ -66,6 +66,50 @@ export function setupMessages() {
       if (recurrenceEndGroup) {
         recurrenceEndGroup.style.display = type !== "once" ? "block" : "none";
       }
+      const jitterGroup = document.getElementById("jitterGroup");
+      if (jitterGroup) {
+        jitterGroup.style.display = type !== "once" && type !== "" ? "block" : "none";
+      }
+    });
+  }
+
+  // Content Rotation Logic
+  const enableRotationCheck = document.getElementById("enableRotationCheck");
+  const rotationContainer = document.getElementById("rotationContainer");
+  const addVariationBtn = document.getElementById("addVariationBtn");
+  const variationsList = document.getElementById("variationsList");
+
+  if (enableRotationCheck) {
+    enableRotationCheck.addEventListener("change", (e) => {
+      rotationContainer.style.display = e.target.checked ? "block" : "none";
+      document.getElementById("messageText").placeholder = e.target.checked
+        ? "Primary Text (Variation 1)..."
+        : "What would you like to say? Type your message here...";
+    });
+  }
+
+  if (addVariationBtn && variationsList) {
+    addVariationBtn.addEventListener("click", () => {
+      const div = document.createElement("div");
+      div.className = "variation-item mb-2";
+      div.style = "display: flex; gap: 8px;";
+
+      const textarea = document.createElement("textarea");
+      textarea.className = "form-control";
+      textarea.rows = 2;
+      textarea.placeholder = "Enter text variation...";
+      textarea.style = "flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--slate-300);";
+
+      const removeBtn = document.createElement("button");
+      removeBtn.innerHTML = "✕";
+      removeBtn.className = "btn btn-outline-danger btn-sm";
+      removeBtn.style = "height: fit-content; margin-top: 4px;";
+      removeBtn.onclick = () => div.remove();
+
+      div.appendChild(textarea);
+      div.appendChild(removeBtn);
+      variationsList.appendChild(div);
+      textarea.focus();
     });
   }
 
@@ -158,6 +202,32 @@ async function handleSendMessage() {
       const endDate = document.getElementById("recurrenceEndDate").value;
       if (endDate) {
         payload.recurrence_end_date = new Date(endDate).toISOString();
+      }
+
+      // Jitter
+      const jitterMinutes = parseInt(document.getElementById("jitterMinutes").value);
+      if (jitterMinutes && jitterMinutes > 0) {
+        payload.jitter_seconds = jitterMinutes * 60;
+      }
+
+      // Content Rotation
+      const enableRotation = document.getElementById("enableRotationCheck").checked;
+      if (enableRotation) {
+        const variations = [];
+        // Include primary text
+        if (text) variations.push(text);
+
+        // Include additional variations
+        document.querySelectorAll("#variationsList textarea").forEach(ta => {
+          if (ta.value.trim()) variations.push(ta.value.trim());
+        });
+
+        // Unique only
+        payload.text_variations = [...new Set(variations)];
+
+        if (payload.text_variations.length < 2) {
+          showToast("For rotation, advise at least 2 variations", "warning");
+        }
       }
     }
 

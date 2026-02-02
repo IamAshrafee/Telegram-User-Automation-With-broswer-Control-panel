@@ -10,6 +10,7 @@ from backend.utils.logger import setup_logger
 from typing import List
 from datetime import datetime, timezone
 import math
+import random
 
 try:
     from zoneinfo import ZoneInfo
@@ -168,8 +169,15 @@ async def schedule_message_bulk(
         scheduled_at=scheduled_at_utc,
         recurrence_type=message_data.recurrence_type,
         recurrence_interval=message_data.recurrence_interval,
-        recurrence_end_date=message_data.recurrence_end_date
+        recurrence_end_date=message_data.recurrence_end_date,
+        text_variations=message_data.text_variations,
+        jitter_seconds=message_data.jitter_seconds
     )
+    
+    # Content Rotation for initial message
+    if message_data.text_variations and len(message_data.text_variations) > 0:
+        message.text = random.choice(message_data.text_variations)
+
     db.add(message)
     db.commit()
     db.refresh(message)
@@ -346,8 +354,15 @@ async def schedule_message(
         scheduled_at=scheduled_at_utc,
         recurrence_type=message_data.recurrence_type,
         recurrence_interval=message_data.recurrence_interval,
-        recurrence_end_date=message_data.recurrence_end_date
+        recurrence_end_date=message_data.recurrence_end_date,
+        text_variations=message_data.text_variations,
+        jitter_seconds=message_data.jitter_seconds
     )
+    
+    # Content Rotation for initial message
+    if message_data.text_variations and len(message_data.text_variations) > 0:
+        message.text = random.choice(message_data.text_variations)
+
     db.add(message)
     db.commit()
     db.refresh(message)
@@ -437,6 +452,11 @@ async def update_scheduled_job(
         message.recurrence_interval = update_data.recurrence_interval
     if update_data.recurrence_end_date is not None:
         message.recurrence_end_date = update_data.recurrence_end_date
+    
+    if update_data.text_variations is not None:
+        message.text_variations = update_data.text_variations
+    if update_data.jitter_seconds is not None:
+        message.jitter_seconds = update_data.jitter_seconds
     
     db.commit()
     db.refresh(message)

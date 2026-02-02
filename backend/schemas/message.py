@@ -14,6 +14,8 @@ class MessageCreate(BaseModel):
     recurrence_type: str = "once"
     recurrence_interval: int = 0
     recurrence_end_date: Optional[datetime] = None
+    text_variations: Optional[List[str]] = None
+    jitter_seconds: Optional[int] = 0
 
 
 class BulkMessageCreate(BaseModel):
@@ -26,6 +28,8 @@ class BulkMessageCreate(BaseModel):
     recurrence_type: str = "once"
     recurrence_interval: int = 0
     recurrence_end_date: Optional[datetime] = None
+    text_variations: Optional[List[str]] = None
+    jitter_seconds: Optional[int] = 0
 
 
 class MessageUpdate(BaseModel):
@@ -38,6 +42,8 @@ class MessageUpdate(BaseModel):
     recurrence_type: Optional[str] = None
     recurrence_interval: Optional[int] = None
     recurrence_end_date: Optional[datetime] = None
+    text_variations: Optional[List[str]] = None
+    jitter_seconds: Optional[int] = None
 
 
 class MessageResponse(BaseModel):
@@ -57,6 +63,9 @@ class MessageResponse(BaseModel):
     recurrence_type: str = "once"
     recurrence_interval: int = 0
     recurrence_end_date: Optional[datetime] = None
+    
+    text_variations: Optional[List[str]] = None
+    jitter_seconds: Optional[int] = 0
     
     scheduled_at: Optional[datetime] = None
     sent_at: Optional[datetime] = None

@@ -197,3 +197,4 @@ backend/telegram_sessions/
 *.session 
 telegram_sessions/ 
 *.db 
+telegram_automation.db.root_bak

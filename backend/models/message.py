@@ -36,6 +36,10 @@ class Message(Base):
     recurrence_interval = Column(Integer, default=0) # for custom: every X days/hours
     recurrence_end_date = Column(DateTime(timezone=True), nullable=True)
     
+    # Advanced Scheduling
+    text_variations = Column(JSON, default=list) # List of text options for rotation
+    jitter_seconds = Column(Integer, default=0) # Max random delay in seconds
+    
     scheduled_at = Column(DateTime(timezone=True), nullable=True)  # Null for immediate send
     sent_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

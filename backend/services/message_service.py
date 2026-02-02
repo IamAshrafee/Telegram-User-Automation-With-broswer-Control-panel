@@ -142,7 +142,9 @@ class MessageService:
             return
             
         # Use scheduled_at as base
-        base_time = message.scheduled_at 
+        base_time = message.scheduled_at
+        if base_time.tzinfo is None:
+            base_time = base_time.replace(tzinfo=timezone.utc) 
         if not base_time:
              # Fallback if somehow missing
              base_time = datetime.now(timezone.utc)
@@ -183,28 +185,35 @@ class MessageService:
         # (Only strict if we care about missed schedules. 
         #  If we just want 'next one', next_run should be > now)
         if next_run:
+            # Catch-up logic
             while next_run <= datetime.now(next_run.tzinfo):
-                 if message.recurrence_type == "daily":
-                     next_run += timedelta(days=1)
-                 elif message.recurrence_type == "weekly":
-                     next_run += timedelta(weeks=1)
-                 elif message.recurrence_type == "custom":
-                     next_run += timedelta(minutes=message.recurrence_interval)
+                if message.recurrence_type == "daily":
+                    next_run += timedelta(days=1)
+                elif message.recurrence_type == "weekly":
+                    next_run += timedelta(weeks=1)
+                elif message.recurrence_type == "custom":
+                    next_run += timedelta(minutes=message.recurrence_interval)
             
-            # Check end date again
-            if message.recurrence_end_date:
-                end_date = message.recurrence_end_date
-                if end_date.tzinfo is None and next_run.tzinfo:
-                     end_date = end_date.replace(tzinfo=next_run.tzinfo)
-                
-                if next_run > end_date:
+                if "end_date" in locals() and end_date and next_run > end_date:
                     logger.info(f"Next run {next_run} is after end date. Stopping recurrence.")
                     return
+
+            # Apply Jitter if configured (Random delay +/- jitter_seconds)
+            if message.jitter_seconds and message.jitter_seconds > 0:
+                jitter = random.randint(-message.jitter_seconds, message.jitter_seconds)
+                next_run += timedelta(seconds=jitter)
+                logger.info(f"Applied jitter of {jitter}s to next run: {next_run}")
+
+            # Content Rotation: Pick random variation if available
+            next_text = message.text
+            if message.text_variations and len(message.text_variations) > 0:
+                next_text = random.choice(message.text_variations)
+                logger.info(f"Rotated content for next run: {next_text[:20]}...")
 
             # Create NEW message record
             new_message = Message(
                 user_id=message.user_id,
-                text=message.text,
+                text=next_text,
                 link=message.link,
                 media_id=message.media_id,
                 target_groups=message.target_groups,
@@ -212,7 +221,9 @@ class MessageService:
                 scheduled_at=next_run,
                 recurrence_type=message.recurrence_type,
                 recurrence_interval=message.recurrence_interval,
-                recurrence_end_date=message.recurrence_end_date
+                recurrence_end_date=message.recurrence_end_date,
+                text_variations=message.text_variations,
+                jitter_seconds=message.jitter_seconds
             )
             
             db.add(new_message)
