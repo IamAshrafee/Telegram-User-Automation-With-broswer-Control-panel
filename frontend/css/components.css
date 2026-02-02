@@ -259,7 +259,6 @@
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-xl);
   border-radius: var(--radius-xl);
-  max-width: 500px;
   width: 95%;
   padding: var(--space-8);
 }

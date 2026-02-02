@@ -204,9 +204,9 @@ a:hover {
 
 /* Main Content Area */
 .main-content {
+  padding: 0px;
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-8);
   background-color: var(--color-bg-app);
 }
 
@@ -231,10 +231,10 @@ a:hover {
 }
 
 .section-header {
+  padding: var(--space-4);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-6);
 }
 
 .section-header h2 {
@@ -242,10 +242,19 @@ a:hover {
   color: var(--color-text-main);
 }
 
+#dashboard h2{
+  padding: var(--space-4);
+}
+
 /* Responsive Styles */
 @media (max-width: 768px) {
   #app {
     flex-direction: column;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: start;
   }
 
   .sidebar {
@@ -312,6 +321,7 @@ a:hover {
     border-radius: 0;
     flex: 1;
     justify-content: center;
+    text-align: center;
   }
 
   .nav-item .icon {
@@ -339,7 +349,7 @@ a:hover {
   }
 
   .main-content {
-    padding: var(--space-4);
+    padding: 10px;
     margin-bottom: 70px; /* Space for bottom nav */
     margin-top: 50px; /* Space for top header */
   }
