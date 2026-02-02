@@ -22,7 +22,7 @@ class APIClient {
       if (isJson) {
         try {
           errorData = await response.json();
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const errorMessage = errorData.detail || response.statusText;
@@ -51,7 +51,7 @@ class APIClient {
         "Content-Type": "application/json",
         ...options.headers,
       };
-      
+
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
@@ -64,7 +64,7 @@ class APIClient {
       if (response.status === 401) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
-        window.location.href = '/login.html';
+        window.location.href = '/sys-admin-panel/login.html';
         return; // Stop processing
       }
 
@@ -124,14 +124,14 @@ class APIClient {
     });
 
     const url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-    
+
     // Prepare headers
     const headers = {};
     const token = localStorage.getItem('access_token');
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    
+
     const response = await fetch(`${this.API_BASE}${url}`, {
       method: "POST",
       headers: headers,
@@ -146,7 +146,7 @@ class APIClient {
     formData.append("file", file);
 
     const url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-    
+
     // Prepare headers
     const headers = {};
     const token = localStorage.getItem('access_token');

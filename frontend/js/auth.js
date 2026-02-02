@@ -179,15 +179,15 @@ export function setupAuth() {
       try {
         // Logout from Telegram session (best effort)
         try {
-            await api.post("/auth/telegram/logout", {});
+          await api.post("/auth/telegram/logout", {});
         } catch (e) {
-            console.warn("Telegram logout failed or not active:", e);
+          console.warn("Telegram logout failed or not active:", e);
         }
-        
+
         // Logout from web session
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
-        window.location.href = '/login.html';
+        window.location.href = '/sys-admin-panel/login.html';
       } catch (error) {
         console.error("Logout error:", error);
       }

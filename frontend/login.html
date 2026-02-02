@@ -1,123 +1,110 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login - Telegram Automation</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="css/auth.css" />
-  </head>
-  <body>
-    <div class="auth-container">
-      <div class="auth-card">
-        <div class="auth-header">
-          <div class="icon-circle">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-              <polyline points="10 17 15 12 10 7"></polyline>
-              <line x1="15" y1="12" x2="3" y2="12"></line>
-            </svg>
-          </div>
-          <h1>Welcome Back</h1>
-          <p>Sign in to access your dashboard</p>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - Telegram Automation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/auth.css" />
+</head>
+
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="icon-circle">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+          </svg>
         </div>
-
-        <form id="loginForm" class="auth-form">
-          <div class="form-group">
-            <label for="email">Email Address</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              placeholder="your@email.com"
-              required
-              autocomplete="email"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              placeholder="••••••••"
-              required
-              autocomplete="current-password"
-            />
-          </div>
-
-          <div id="errorMessage" class="error-message" style="display: none;"></div>
-
-          <button type="submit" id="loginBtn" class="btn-primary">
-            <span class="btn-text">Sign In</span>
-            <span class="btn-loader" style="display: none;">
-              <svg class="spinner" viewBox="0 0 50 50">
-                <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
-              </svg>
-            </span>
-          </button>
-        </form>
-
-        <div class="auth-footer">
-          <p>Don't have an account? <a href="register.html">Sign up</a></p>
-        </div>
+        <h1>Welcome Back</h1>
+        <p>Sign in to access your dashboard</p>
       </div>
 
-      <div class="auth-bg">
-        <div class="gradient-orb orb-1"></div>
-        <div class="gradient-orb orb-2"></div>
-        <div class="gradient-orb orb-3"></div>
+      <form id="loginForm" class="auth-form">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="your@email.com" required autocomplete="email" />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" required
+            autocomplete="current-password" />
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+        <button type="submit" id="loginBtn" class="btn-primary">
+          <span class="btn-text">Sign In</span>
+          <span class="btn-loader" style="display: none;">
+            <svg class="spinner" viewBox="0 0 50 50">
+              <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+            </svg>
+          </span>
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        <p>Don't have an account? <a href="register.html">Sign up</a></p>
       </div>
     </div>
 
-    <script src="js/web-auth.js"></script>
-    <script>
-      const loginForm = document.getElementById('loginForm');
-      const loginBtn = document.getElementById('loginBtn');
-      const errorMessage = document.getElementById('errorMessage');
+    <div class="auth-bg">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+      <div class="gradient-orb orb-3"></div>
+    </div>
+  </div>
 
-      loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+  <script src="js/web-auth.js"></script>
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorMessage = document.getElementById('errorMessage');
 
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-        // Show loading state
-        loginBtn.disabled = true;
-        loginBtn.querySelector('.btn-text').style.display = 'none';
-        loginBtn.querySelector('.btn-loader').style.display = 'inline-block';
-        errorMessage.style.display = 'none';
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
 
-        try {
-          const result = await login(email, password);
-          
-          if (result.success) {
-            // Redirect to dashboard
-            window.location.href = '/';
-          } else {
-            throw new Error(result.message || 'Login failed');
-          }
-        } catch (error) {
-          errorMessage.textContent = error.message || 'Login failed. Please check your credentials.';
-          errorMessage.style.display = 'block';
-          
-          // Reset button
-          loginBtn.disabled = false;
-          loginBtn.querySelector('.btn-text').style.display = 'inline';
-          loginBtn.querySelector('.btn-loader').style.display = 'none';
+      // Show loading state
+      loginBtn.disabled = true;
+      loginBtn.querySelector('.btn-text').style.display = 'none';
+      loginBtn.querySelector('.btn-loader').style.display = 'inline-block';
+      errorMessage.style.display = 'none';
+
+      try {
+        const result = await login(email, password);
+
+        if (result.success) {
+          // Redirect to dashboard (production path with nginx prefix)
+          window.location.href = '/sys-admin-panel/';
+        } else {
+          throw new Error(result.message || 'Login failed');
         }
-      });
+      } catch (error) {
+        errorMessage.textContent = error.message || 'Login failed. Please check your credentials.';
+        errorMessage.style.display = 'block';
 
-      // Check if already logged in
-      if (isAuthenticated()) {
-        window.location.href = '/';
+        // Reset button
+        loginBtn.disabled = false;
+        loginBtn.querySelector('.btn-text').style.display = 'inline';
+        loginBtn.querySelector('.btn-loader').style.display = 'none';
       }
-    </script>
-  </body>
+    });
+
+    // Check if already logged in
+    if (isAuthenticated()) {
+      window.location.href = '/sys-admin-panel/';
+    }
+  </script>
+</body>
+
 </html>

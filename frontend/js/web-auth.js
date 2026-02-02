@@ -24,10 +24,10 @@ async function register(name, email, password) {
     const data = await response.json();
 
     if (!response.ok) {
-        const errorMsg = typeof data.detail === 'object' 
-            ? JSON.stringify(data.detail) 
-            : (data.detail || 'Registration failed');
-        throw new Error(errorMsg);
+      const errorMsg = typeof data.detail === 'object'
+        ? JSON.stringify(data.detail)
+        : (data.detail || 'Registration failed');
+      throw new Error(errorMsg);
     }
 
     // Store token and user data
@@ -60,10 +60,10 @@ async function login(email, password) {
     const data = await response.json();
 
     if (!response.ok) {
-        const errorMsg = typeof data.detail === 'object' 
-            ? JSON.stringify(data.detail) 
-            : (data.detail || 'Login failed');
-        throw new Error(errorMsg);
+      const errorMsg = typeof data.detail === 'object'
+        ? JSON.stringify(data.detail)
+        : (data.detail || 'Login failed');
+      throw new Error(errorMsg);
     }
 
     // Store token and user data
@@ -83,7 +83,7 @@ async function login(email, password) {
 function logout() {
   localStorage.removeItem('access_token');
   localStorage.removeItem('user');
-  window.location.href = '/login.html';
+  window.location.href = '/sys-admin-panel/login.html';
 }
 
 /**
@@ -121,7 +121,7 @@ async function authenticatedFetch(url, options = {}) {
   const token = getToken();
 
   if (!token) {
-    window.location.href = '/login.html';
+    window.location.href = '/sys-admin-panel/login.html';
     throw new Error('Not authenticated');
   }
 
