@@ -9,6 +9,14 @@ class GroupBase(BaseModel):
     title: str
     permission_type: PermissionType = PermissionType.ALL
     is_active: bool = True
+    
+    # Advanced Stats
+    member_count: int = 0
+    username: Optional[str] = None
+    is_admin: bool = False
+    slow_mode_delay: int = 0
+    has_media_restriction: bool = False
+    has_link_restriction: bool = False
 
 
 class GroupCreate(GroupBase):

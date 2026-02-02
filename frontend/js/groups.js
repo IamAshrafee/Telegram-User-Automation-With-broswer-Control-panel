@@ -328,41 +328,77 @@ function renderGroups(groups, append = false) {
       titleContainer.textContent = group.title;
     }
 
+    // Badges Logic
+    let badgesHtml = "";
+    if (group.is_admin) {
+      badgesHtml += `<span class="badge badge-warning" title="You are an Admin">👑 Admin</span>`;
+    }
+    if (group.slow_mode_delay > 0) {
+      badgesHtml += `<span class="badge badge-info" title="Slow Mode Active">⏳ ${group.slow_mode_delay}s</span>`;
+    }
+    if (group.has_media_restriction) {
+      badgesHtml += `<span class="badge badge-danger" title="Sending Media Banned">🚫 Media</span>`;
+    }
+    if (group.has_link_restriction) {
+      badgesHtml += `<span class="badge badge-danger" title="Embedding Links Banned">🚫 Links</span>`;
+    }
+
+    // Member Count Formatting
+    const memberCount = group.member_count
+      ? new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short" }).format(group.member_count)
+      : "Unknown";
+
     card.innerHTML = `
-        <div class="group-header">
-            <div class="d-flex align-items-center">
+        <div class="group-header-compact">
+            <div class="header-main">
                 <input type="checkbox" class="group-checkbox" data-id="${group.id}">
+                <div class="title-section">
+                    <div class="title-row">
+                        ${titleContainer.outerHTML}
+                        <span class="member-badge" title="${group.member_count || 0} members">👥 ${memberCount}</span>
+                    </div>
+                    ${group.username ? `<a href="https://t.me/${group.username}" target="_blank" class="username-link">@${group.username}</a>` : ''}
+                </div>
             </div>
             <div class="group-status">
-                <label class="switch">
+                <label class="switch switch-sm">
                     <input type="checkbox" class="group-toggle-input" data-id="${group.id}" ${group.is_active ? "checked" : ""}>
                     <span class="slider round"></span>
                 </label>
             </div>
         </div>
-        <div class="group-details">
-            <div class="mb-3">
-              <span class="badge badge-${group.permission_type}">${group.permission_type.replace("_", " ")}</span>
+
+        <div class="badges-row">
+            <span class="badge badge-permission badge-${group.permission_type}">${group.permission_type.replace("_", " ")}</span>
+            ${badgesHtml}
+        </div>
+
+        <div class="group-stats-compact">
+             <div class="stat-pill" title="Messages Sent">
+                <span class="icon">💬</span> ${group.messages_sent || 0}
             </div>
-            <p class="text-sm text-muted">Added: ${formatDate(group.created_at)}</p>
-            <div class="group-stats-strip mt-2">
-                <span title="Total Messages Sent">💬 ${group.messages_sent || 0}</span> <!-- Fixed prop name -->
-                <span title="Successful Messages">✅ ${group.success_rate || 0}%</span> <!-- Fixed logic/prop -->
+             <div class="stat-pill ${group.success_rate < 80 ? 'text-danger' : 'text-success'}" title="Success Rate">
+                <span class="icon">✅</span> ${group.success_rate || 0}%
+            </div>
+             <div class="stat-pill text-muted" title="Added Date">
+                <span class="icon">📅</span> ${new Date(group.created_at).toLocaleDateString()}
             </div>
         </div>
-        <div class="group-actions mt-auto pt-4">
-            <select class="form-control form-control-sm permission-select" data-id="${group.id}">
-                <option value="all" ${group.permission_type === "all" ? "selected" : ""}>All Content</option>
-                <option value="text_only" ${group.permission_type === "text_only" ? "selected" : ""}>Text Only</option>
-                <option value="text_link" ${group.permission_type === "text_link" ? "selected" : ""}>Text + Link</option>
-                <option value="text_image" ${group.permission_type === "text_image" ? "selected" : ""}>Text + Image</option>
-                <option value="text_link_image" ${group.permission_type === "text_link_image" ? "selected" : ""}>Text + Link + Image</option>
+
+        <div class="group-actions-compact">
+             <select class="form-control form-control-xs permission-select" data-id="${group.id}">
+                <option value="all" ${group.permission_type === "all" ? "selected" : ""}>Allowed: All</option>
+                <option value="text_only" ${group.permission_type === "text_only" ? "selected" : ""}>Allowed: Text</option>
+                <option value="text_link" ${group.permission_type === "text_link" ? "selected" : ""}>Allowed: Text+Link</option>
+                <option value="text_image" ${group.permission_type === "text_image" ? "selected" : ""}>Allowed: Text+Img</option>
+                <option value="text_link_image" ${group.permission_type === "text_link_image" ? "selected" : ""}>Allowed: All</option>
             </select>
-            <button class="btn btn-outline-danger btn-sm delete-group-btn" data-id="${group.id}">🗑️ Remove</button>
+            <button class="btn-icon delete-group-btn" data-id="${group.id}" title="Remove Group">🗑️</button>
         </div>
     `;
 
-    card.querySelector(".group-header .d-flex").appendChild(titleContainer);
+    // No longer appending titleContainer manually since we used outerHTML above
+    // card.querySelector(".group-header .d-flex").appendChild(titleContainer);
     fragment.appendChild(card);
   });
 

@@ -103,7 +103,7 @@ class TelegramClientService:
             return False
     
     async def get_dialogs(self) -> List[Dict]:
-        """Fetch user's groups/channels from Telegram."""
+        """Fetch user's Telegram groups only (excludes channels)."""
         try:
             if not self.client or not await self.client.is_user_authorized():
                 return []
@@ -112,11 +112,39 @@ class TelegramClientService:
             groups = []
             
             for dialog in dialogs:
-                # Only include groups and channels
-                if dialog.is_group or dialog.is_channel:
+                # Only include groups (not channels)
+                if dialog.is_group:
+                    entity = dialog.entity
+                    
+                    # Extract logic
+                    member_count = getattr(entity, 'participants_count', 0) or 0
+                    username = getattr(entity, 'username', None)
+                    
+                    # Admin status (admin_rights is not None OR creator=True)
+                    is_admin = getattr(entity, 'admin_rights', None) is not None or getattr(entity, 'creator', False)
+                    
+                    # Slow mode
+                    slow_mode_delay = getattr(entity, 'slowmode_seconds', 0) or 0
+                    
+                    # Global restrictions (default_banned_rights)
+                    # If True, it means it is BANNED for everyone
+                    banned_rights = getattr(entity, 'default_banned_rights', None)
+                    has_media_restriction = False
+                    has_link_restriction = False
+                    
+                    if banned_rights:
+                        has_media_restriction = getattr(banned_rights, 'send_media', False)
+                        has_link_restriction = getattr(banned_rights, 'embed_links', False)
+
                     groups.append({
                         "telegram_id": str(dialog.id),
                         "title": dialog.title,
+                        "member_count": member_count,
+                        "username": username,
+                        "is_admin": is_admin,
+                        "slow_mode_delay": slow_mode_delay,
+                        "has_media_restriction": has_media_restriction,
+                        "has_link_restriction": has_link_restriction
                     })
             
             return groups

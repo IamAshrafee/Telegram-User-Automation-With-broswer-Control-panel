@@ -106,9 +106,18 @@ async def sync_groups(
         ).first()
         
         if existing:
-            # Update title if changed
+            # Update properties
             if existing.title != tg_group["title"]:
                 existing.title = tg_group["title"]
+            
+            # Update stats/metadata
+            existing.member_count = tg_group.get("member_count", 0)
+            existing.username = tg_group.get("username")
+            existing.is_admin = tg_group.get("is_admin", False)
+            existing.slow_mode_delay = tg_group.get("slow_mode_delay", 0)
+            existing.has_media_restriction = tg_group.get("has_media_restriction", False)
+            existing.has_link_restriction = tg_group.get("has_link_restriction", False)
+
             # Reactivate if it was inactive
             if not existing.is_active:
                 existing.is_active = True
@@ -118,6 +127,12 @@ async def sync_groups(
                 user_id=current_user.id,
                 telegram_id=tg_group["telegram_id"],
                 title=tg_group["title"],
+                member_count=tg_group.get("member_count", 0),
+                username=tg_group.get("username"),
+                is_admin=tg_group.get("is_admin", False),
+                slow_mode_delay=tg_group.get("slow_mode_delay", 0),
+                has_media_restriction=tg_group.get("has_media_restriction", False),
+                has_link_restriction=tg_group.get("has_link_restriction", False),
                 permission_type=PermissionType.ALL,
                 is_active=True
             )

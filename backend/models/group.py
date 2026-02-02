@@ -25,6 +25,14 @@ class Group(Base):
     permission_type = Column(SQLEnum(PermissionType), default=PermissionType.ALL)
     is_active = Column(Boolean, default=True)
     
+    # Advanced Stats & Metadata
+    member_count = Column(Integer, default=0)
+    username = Column(String, nullable=True)
+    is_admin = Column(Boolean, default=False)
+    slow_mode_delay = Column(Integer, default=0)
+    has_media_restriction = Column(Boolean, default=False)
+    has_link_restriction = Column(Boolean, default=False)
+    
     # Analytics fields
     messages_sent = Column(Integer, default=0)
     messages_failed = Column(Integer, default=0)
